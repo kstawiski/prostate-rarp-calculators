@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISUP Upgrading Risk Calculator</title>
+<meta name="description" content="Predicts probability of ISUP grade group upgrading after radical prostatectomy. Based on LASSO-penalized logistic regression with internal-external cross-validation (n=599).">
+<style>
+  :root {
+    --primary: #1a365d;
+    --primary-light: #2a4a7f;
+    --primary-lighter: #3b6cb5;
+    --accent: #2b6cb0;
+    --accent-light: #4299e1;
+    --bg: #f0f4f8;
+    --card-bg: #ffffff;
+    --text: #1a202c;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --border: #e2e8f0;
+    --border-focus: #4299e1;
+    --success: #38a169;
+    --warning: #d69e2e;
+    --danger: #e53e3e;
+    --info: #3182ce;
+    --low-risk: #38a169;
+    --moderate-risk: #d69e2e;
+    --high-risk: #e53e3e;
+    --gauge-track: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.05);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, var(--accent) 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.35rem;
+    position: relative;
+  }
+  .header .subtitle {
+    font-size: 0.88rem;
+    opacity: 0.85;
+    font-weight: 400;
+    position: relative;
+  }
+  .header .badge {
+    display: inline-block;
+    margin-top: 0.7rem;
+    padding: 0.2rem 0.7rem;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    position: relative;
+    backdrop-filter: blur(4px);
+  }
+
+  /* Layout */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+  }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 0.85rem 1rem;
+    border: none;
+    background: transparent;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    font-family: inherit;
+  }
+  .tab-btn:hover { background: rgba(66,153,225,0.05); }
+  .tab-btn.active {
+    color: var(--accent);
+    background: rgba(66,153,225,0.08);
+  }
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    width: 80%;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 3px 3px 0 0;
+  }
+  .tab-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .card-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card-title .icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* Form elements */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.1rem;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+  .form-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+  }
+  .form-label .unit {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+  .form-input {
+    padding: 0.65rem 0.85rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--text);
+    background: #fafbfc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(66,153,225,0.15);
+    background: white;
+  }
+  .form-input::-webkit-inner-spin-button { opacity: 1; }
+
+  /* Select / radio buttons */
+  .radio-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .radio-btn {
+    flex: 1;
+    min-width: 0;
+  }
+  .radio-btn input { display: none; }
+  .radio-btn label {
+    display: block;
+    padding: 0.55rem 0.5rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fafbfc;
+    color: var(--text-secondary);
+  }
+  .radio-btn input:checked + label {
+    border-color: var(--accent);
+    background: rgba(66,153,225,0.08);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .radio-btn label:hover {
+    border-color: var(--accent-light);
+    background: rgba(66,153,225,0.04);
+  }
+
+  /* MRI section */
+  .mri-section {
+    display: none;
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
+    border-top: 1px dashed var(--border);
+  }
+  .mri-section.visible { display: block; }
+  .mri-section .card-title { margin-bottom: 1rem; }
+
+  .checkbox-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+  }
+  .checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .checkbox-item span {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  /* Calculate button */
+  .calc-btn {
+    display: block;
+    width: 100%;
+    padding: 0.9rem;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--primary-lighter) 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+  }
+  .calc-btn:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .calc-btn:active { transform: translateY(0); }
+
+  /* Results */
+  .results-panel {
+    display: none;
+  }
+  .results-panel.visible { display: block; }
+
+  .result-main {
+    text-align: center;
+    padding: 1.5rem;
+  }
+
+  /* Gauge */
+  .gauge-container {
+    position: relative;
+    width: 200px;
+    height: 120px;
+    margin: 0 auto 1rem;
+  }
+  .gauge-svg {
+    width: 200px;
+    height: 120px;
+  }
+  .gauge-track {
+    fill: none;
+    stroke: var(--gauge-track);
+    stroke-width: 14;
+    stroke-linecap: round;
+  }
+  .gauge-fill {
+    fill: none;
+    stroke-width: 14;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease-out, stroke 0.4s;
+  }
+  .gauge-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    fill: var(--text);
+    text-anchor: middle;
+    dominant-baseline: auto;
+  }
+  .gauge-label-text {
+    font-size: 0.72rem;
+    fill: var(--text-muted);
+    text-anchor: middle;
+    dominant-baseline: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .risk-label {
+    display: inline-block;
+    padding: 0.25rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .risk-low { background: #f0fff4; color: #276749; }
+  .risk-moderate { background: #fffff0; color: #975a16; }
+  .risk-high { background: #fff5f5; color: #c53030; }
+
+  /* Comparison bar */
+  .comparison-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .comparison-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.7rem;
+  }
+  .comparison-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 70px;
+    text-align: right;
+  }
+  .comparison-bar-track {
+    flex: 1;
+    height: 22px;
+    background: var(--gauge-track);
+    border-radius: 11px;
+    overflow: hidden;
+    position: relative;
+  }
+  .comparison-bar-fill {
+    height: 100%;
+    border-radius: 11px;
+    transition: width 0.8s ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    min-width: 40px;
+  }
+  .comparison-bar-fill span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .bar-a { background: linear-gradient(90deg, #4299e1, #3182ce); }
+  .bar-b { background: linear-gradient(90deg, #9f7aea, #805ad5); }
+
+  /* Interpretation */
+  .interp-card {
+    background: #f7fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.2rem;
+    margin-top: 0.75rem;
+  }
+  .interp-card h4 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+  }
+  .interp-card p, .interp-card li {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .interp-card ul {
+    padding-left: 1.2rem;
+    margin-top: 0.4rem;
+  }
+  .interp-card li { margin-bottom: 0.25rem; }
+
+  .highlight-stat {
+    display: inline-block;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  /* Context table */
+  .context-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-top: 0.5rem;
+  }
+  .context-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    background: #edf2f7;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+  }
+  .context-table td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid #f0f4f8;
+    color: var(--text-secondary);
+  }
+  .context-table tr:last-child td { border-bottom: none; }
+  .context-table .highlight-row {
+    background: rgba(66,153,225,0.06);
+    font-weight: 600;
+  }
+
+  /* Info / footer */
+  .info-section {
+    margin-top: 0.5rem;
+  }
+  .info-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.5rem 0;
+    font-family: inherit;
+  }
+  .info-toggle .arrow {
+    transition: transform 0.2s;
+    font-size: 0.7rem;
+  }
+  .info-toggle.open .arrow { transform: rotate(90deg); }
+  .info-content {
+    display: none;
+    padding: 0.75rem 0;
+  }
+  .info-content.visible { display: block; }
+  .info-content p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin-bottom: 0.5rem;
+  }
+
+  .disclaimer {
+    background: #fffaf0;
+    border: 1px solid #feebc8;
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    color: #975a16;
+    line-height: 1.5;
+  }
+  .disclaimer strong { color: #c05621; }
+
+  .footer {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .header { padding: 1.5rem 1rem; }
+    .header h1 { font-size: 1.3rem; }
+    .form-grid { grid-template-columns: 1fr; }
+    .container { padding: 1rem 0.75rem; }
+    .card { padding: 1.2rem; }
+    .radio-group { gap: 0.35rem; }
+    .radio-btn label { padding: 0.5rem 0.3rem; font-size: 0.8rem; }
+    .tab-btn { padding: 0.7rem 0.5rem; font-size: 0.82rem; }
+    .tab-label { font-size: 0.66rem; }
+  }
+
+  /* Reset button */
+  .reset-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.4rem 0.8rem;
+    font-family: inherit;
+    transition: all 0.2s;
+    margin-top: 0.75rem;
+  }
+  .reset-btn:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .results-panel.visible { animation: fadeIn 0.35s ease-out; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ISUP Upgrading Risk Calculator</h1>
+  <div class="subtitle">Prediction of ISUP Grade Group Upgrading After Radical Prostatectomy</div>
+  <div class="badge">n = 599 &middot; LASSO Logistic Regression &middot; IECV Validated</div>
+</div>
+
+<div class="container">
+
+  <!-- Model tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchModel('A')" id="tabA">
+      Model A
+      <span class="tab-label">Clinic-only (C = 0.812)</span>
+    </button>
+    <button class="tab-btn" onclick="switchModel('B')" id="tabB">
+      Model B
+      <span class="tab-label">Clinic + MRI (C = 0.816)</span>
+    </button>
+  </div>
+
+  <!-- Input card -->
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span> Clinical parameters</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="age">Age <span class="unit">(years)</span></label>
+        <input type="number" class="form-input" id="age" min="30" max="90" step="1" placeholder="e.g. 65">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="psa">PSA <span class="unit">(ng/mL)</span></label>
+        <input type="number" class="form-input" id="psa" min="0" max="200" step="0.1" placeholder="e.g. 7.3">
+      </div>
+      <div class="form-group full-width">
+        <label class="form-label">Biopsy ISUP Grade Group</label>
+        <div class="radio-group">
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg1" value="1">
+            <label for="gg1">GG1<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">3+3</span></label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg2" value="2">
+            <label for="gg2">GG2<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">3+4</span></label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg3" value="3">
+            <label for="gg3">GG3<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+3</span></label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg4" value="4">
+            <label for="gg4">GG4<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+4</span></label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg5" value="5">
+            <label for="gg5">GG5<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+5/5+5</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MRI section (Model B only) -->
+    <div class="mri-section" id="mriSection">
+      <div class="card-title"><span class="icon">2</span> MRI parameters</div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">PI-RADS Score</label>
+          <div class="radio-group">
+            <div class="radio-btn">
+              <input type="radio" name="pirads" id="pirads3" value="3">
+              <label for="pirads3">&le; 3</label>
+            </div>
+            <div class="radio-btn">
+              <input type="radio" name="pirads" id="pirads4" value="4">
+              <label for="pirads4">4</label>
+            </div>
+            <div class="radio-btn">
+              <input type="radio" name="pirads" id="pirads5" value="5">
+              <label for="pirads5">5</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">MRI Lesion Location(s)</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="mri_apex">
+              <span>Apex</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="mri_midgland">
+              <span>Midgland</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="mri_base">
+              <span>Base</span>
+              <span style="font-size:0.7rem;color:var(--text-muted)">(not in model)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calculate -->
+  <button class="calc-btn" onclick="calculate()">Calculate Upgrading Risk</button>
+  <div style="text-align:center">
+    <button class="reset-btn" onclick="resetForm()">&#8634; Reset</button>
+  </div>
+
+  <!-- Results -->
+  <div class="results-panel" id="resultsPanel">
+
+    <div class="card">
+      <div class="card-title"><span class="icon">R</span> Predicted upgrading probability</div>
+      <div class="result-main">
+        <div class="gauge-container">
+          <svg class="gauge-svg" viewBox="0 0 200 120">
+            <path class="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" />
+            <path class="gauge-fill" id="gaugeFill" d="M 20 100 A 80 80 0 0 1 180 100"
+              stroke-dasharray="251.33" stroke-dashoffset="251.33" />
+            <text x="100" y="92" class="gauge-value" id="gaugeValue">—</text>
+            <text x="100" y="110" class="gauge-label-text">probability</text>
+          </svg>
+        </div>
+        <div id="riskLabel" class="risk-label risk-moderate" style="display:none">—</div>
+      </div>
+
+      <!-- A vs B comparison -->
+      <div class="comparison-section" id="comparisonSection">
+        <div style="font-size:0.78rem;font-weight:600;color:var(--text-muted);margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.05em">Model comparison</div>
+        <div class="comparison-row">
+          <span class="comparison-label">Model A</span>
+          <div class="comparison-bar-track">
+            <div class="comparison-bar-fill bar-a" id="barA" style="width:0%"><span id="barAVal"></span></div>
+          </div>
+        </div>
+        <div class="comparison-row">
+          <span class="comparison-label">Model B</span>
+          <div class="comparison-bar-track">
+            <div class="comparison-bar-fill bar-b" id="barB" style="width:0%"><span id="barBVal"></span></div>
+          </div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem" id="deltaNote"></div>
+      </div>
+    </div>
+
+    <!-- Interpretation -->
+    <div class="card" id="interpCard">
+      <div class="card-title"><span class="icon">i</span> Interpretation</div>
+      <div id="interpContent"></div>
+    </div>
+
+    <!-- Cohort context -->
+    <div class="card">
+      <div class="card-title"><span class="icon">C</span> Cohort context</div>
+      <div class="interp-card" style="background:white;border:none;padding:0">
+        <p style="margin-bottom:0.5rem">Observed upgrading rates in the development cohort (n = 599):</p>
+        <table class="context-table">
+          <thead>
+            <tr>
+              <th>Biopsy Grade Group</th>
+              <th>n</th>
+              <th>Upgraded</th>
+              <th>Rate</th>
+              <th>Key transitions</th>
+            </tr>
+          </thead>
+          <tbody id="contextTableBody">
+            <tr id="ctxGG1">
+              <td>GG1 (3+3)</td>
+              <td>250</td>
+              <td>194</td>
+              <td><strong>77.6%</strong></td>
+              <td style="font-size:0.78rem">63.2% &rarr; GG2, 14.4% &rarr; GG3+</td>
+            </tr>
+            <tr id="ctxGG2">
+              <td>GG2 (3+4)</td>
+              <td>207</td>
+              <td>67</td>
+              <td><strong>32.4%</strong></td>
+              <td style="font-size:0.78rem">26.1% &rarr; GG3, 6.3% &rarr; GG4/5</td>
+            </tr>
+            <tr id="ctxGG3">
+              <td>GG3 (4+3)</td>
+              <td>83</td>
+              <td>11</td>
+              <td><strong>13.3%</strong></td>
+              <td style="font-size:0.78rem">8.4% &rarr; GG4, 4.8% &rarr; GG5</td>
+            </tr>
+            <tr id="ctxGG4">
+              <td>GG4 (4+4)</td>
+              <td>51</td>
+              <td>7</td>
+              <td><strong>13.7%</strong></td>
+              <td style="font-size:0.78rem">13.7% &rarr; GG5 (64.7% downgraded)</td>
+            </tr>
+            <tr id="ctxGG5">
+              <td>GG5 (4+5/5+5)</td>
+              <td>8</td>
+              <td>0</td>
+              <td><strong>0.0%</strong></td>
+              <td style="font-size:0.78rem">Cannot upgrade further</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model details -->
+  <div class="info-section">
+    <button class="info-toggle" id="infoToggle" onclick="toggleInfo()">
+      <span class="arrow">&#9654;</span> Model details &amp; validation
+    </button>
+    <div class="info-content" id="infoContent">
+      <div class="card" style="margin-top:0.5rem">
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.8rem">Model A (Clinic-Only)</h4>
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.5rem">
+          logit(P) = &minus;0.351 + 0.020 &times; age + 0.036 &times; PSA &minus; 2.040 &times; GG2 &minus; 3.424 &times; GG3+
+        </p>
+        <table class="context-table">
+          <thead><tr><th>Predictor</th><th>Log-OR</th><th>OR</th><th>95% CI</th><th>p</th></tr></thead>
+          <tbody>
+            <tr><td>Intercept</td><td>&minus;0.351</td><td>&mdash;</td><td>&mdash;</td><td>0.733</td></tr>
+            <tr><td>Age (per year)</td><td>0.020</td><td>1.021</td><td>0.990&ndash;1.052</td><td>0.196</td></tr>
+            <tr><td>PSA (per ng/mL)</td><td>0.036</td><td>1.036</td><td>1.012&ndash;1.061</td><td>0.004</td></tr>
+            <tr><td>ISUP GG2 (vs GG1)</td><td>&minus;2.040</td><td>0.130</td><td>0.085&ndash;0.199</td><td>&lt;0.001</td></tr>
+            <tr><td>ISUP GG3+ (vs GG1)</td><td>&minus;3.424</td><td>0.033</td><td>0.017&ndash;0.061</td><td>&lt;0.001</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">
+          Corrected C-statistic: <strong>0.812</strong> (optimism 0.004) &middot;
+          Calibration slope: 0.982 &middot; Brier: 0.175<br>
+          IECV AUC: 0.797 (I&sup2; = 0%, 5 annual folds) &middot; EPV: 69.8
+        </p>
+
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Model B (Clinic + MRI)</h4>
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.5rem">
+          logit(P) = &minus;0.314 + 0.019 &times; age + 0.033 &times; PSA &minus; 2.098 &times; GG2 &minus; 3.559 &times; GG3+ + 0.059 &times; PI-RADS4 + 0.484 &times; PI-RADS5 &minus; 0.540 &times; apex &minus; 0.538 &times; midgland
+        </p>
+        <table class="context-table">
+          <thead><tr><th>Predictor</th><th>Log-OR</th><th>OR</th><th>95% CI</th></tr></thead>
+          <tbody>
+            <tr><td>Intercept</td><td>&minus;0.314</td><td>&mdash;</td><td>&mdash;</td></tr>
+            <tr><td>Age (per year)</td><td>0.019</td><td>1.019</td><td>0.988&ndash;1.052</td></tr>
+            <tr><td>PSA (per ng/mL)</td><td>0.033</td><td>1.034</td><td>1.008&ndash;1.059</td></tr>
+            <tr><td>ISUP GG2 (vs GG1)</td><td>&minus;2.098</td><td>0.123</td><td>0.079&ndash;0.190</td></tr>
+            <tr><td>ISUP GG3+ (vs GG1)</td><td>&minus;3.559</td><td>0.028</td><td>0.015&ndash;0.054</td></tr>
+            <tr><td>PI-RADS 4 (vs &le;3)</td><td>0.059</td><td>1.061</td><td>0.541&ndash;2.079</td></tr>
+            <tr><td>PI-RADS 5 (vs &le;3)</td><td>0.484</td><td>1.622</td><td>0.786&ndash;3.348</td></tr>
+            <tr><td>MRI apex</td><td>&minus;0.540</td><td>0.583</td><td>0.236&ndash;1.443</td></tr>
+            <tr><td>MRI midgland</td><td>&minus;0.538</td><td>0.584</td><td>0.280&ndash;1.219</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">
+          Corrected C-statistic: <strong>0.816</strong> (optimism 0.009) &middot;
+          Calibration slope: 0.943 &middot; Brier: 0.169<br>
+          IECV AUC: 0.807 (I&sup2; = 0%, 5 annual folds)<br>
+          MRI added &Delta;C = +0.004 after optimism correction (negligible)
+        </p>
+
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Validation Summary</h4>
+        <p style="font-size:0.82rem;color:var(--text-secondary)">
+          Both models were developed using LASSO-penalized logistic regression with stability selection across m = 40 multiply imputed datasets. Validation included bootstrap optimism correction (B = 1000) and leave-one-year-out internal-external cross-validation (IECV) across five annual strata (2021&ndash;2025). An XGBoost benchmark achieved corrected C = 0.854 but with substantially greater optimism (0.072), suggesting the logistic model captures nearly all available signal.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    <strong>Research tool &mdash; not for clinical decision-making.</strong>
+    This calculator implements models from a single-surgeon, two-center study (n = 599). It has undergone internal-external cross-validation but not external validation in independent cohorts. Predictions should not replace clinical judgment. The model predicts <em>any</em> upgrading; clinically significant upgrading (GG1/GG2 to GG3+) is substantially harder to predict (corrected C = 0.653).
+  </div>
+
+  <div class="footer">
+    Jobczyk M, Clinton TN, De Carvalho FL, Stawiski K.<br>
+    <em>Prediction of ISUP Grade Group Upgrading After Radical Prostatectomy:</em><br>
+    <em>Development and Internal-External Cross-Validation.</em><br>
+    Prostate Cancer and Prostatic Diseases (submitted 2026).
+  </div>
+
+</div>
+
+<script>
+// ── Model coefficients (Rubin-pooled from m=40 MI datasets) ──
+
+const MODEL_A = {
+  intercept: -0.351,
+  age: 0.020,
+  psa: 0.036,
+  gg2: -2.040,
+  gg3plus: -3.424
+};
+
+const MODEL_B = {
+  intercept: -0.313520,
+  age: 0.018848,
+  psa: 0.033039,
+  gg2: -2.097721,
+  gg3plus: -3.559484,
+  pirads4: 0.058911,
+  pirads5: 0.483866,
+  mri_apex: -0.539800,
+  mri_midgland: -0.537733
+};
+
+// Cohort observed rates
+const COHORT_RATES = {
+  1: { rate: 0.776, n: 250, upgraded: 194, toGG2: 0.632, toGG3plus: 0.144 },
+  2: { rate: 0.324, n: 207, upgraded: 67, toGG3: 0.261, toGG4plus: 0.063 },
+  3: { rate: 0.133, n: 83, upgraded: 11 },
+  4: { rate: 0.137, n: 51, upgraded: 7, downgraded: 0.647 },
+  5: { rate: 0.000, n: 8, upgraded: 0 }
+};
+
+let currentModel = 'A';
+
+function switchModel(model) {
+  currentModel = model;
+  document.getElementById('tabA').classList.toggle('active', model === 'A');
+  document.getElementById('tabB').classList.toggle('active', model === 'B');
+  document.getElementById('mriSection').classList.toggle('visible', model === 'B');
+
+  // Recalculate if results are visible
+  if (document.getElementById('resultsPanel').classList.contains('visible')) {
+    calculate();
+  }
+}
+
+function logistic(logit) {
+  return Math.exp(logit) / (1 + Math.exp(logit));
+}
+
+function predictA(age, psa, isup) {
+  const gg2 = isup === 2 ? 1 : 0;
+  const gg3plus = isup >= 3 ? 1 : 0;
+  const lp = MODEL_A.intercept + MODEL_A.age * age + MODEL_A.psa * psa
+           + MODEL_A.gg2 * gg2 + MODEL_A.gg3plus * gg3plus;
+  return logistic(lp);
+}
+
+function predictB(age, psa, isup, pirads, apex, midgland) {
+  const gg2 = isup === 2 ? 1 : 0;
+  const gg3plus = isup >= 3 ? 1 : 0;
+  const p4 = pirads === 4 ? 1 : 0;
+  const p5 = pirads === 5 ? 1 : 0;
+  const lp = MODEL_B.intercept + MODEL_B.age * age + MODEL_B.psa * psa
+           + MODEL_B.gg2 * gg2 + MODEL_B.gg3plus * gg3plus
+           + MODEL_B.pirads4 * p4 + MODEL_B.pirads5 * p5
+           + MODEL_B.mri_apex * (apex ? 1 : 0)
+           + MODEL_B.mri_midgland * (midgland ? 1 : 0);
+  return logistic(lp);
+}
+
+function calculate() {
+  const age = parseFloat(document.getElementById('age').value);
+  const psa = parseFloat(document.getElementById('psa').value);
+  const isupEl = document.querySelector('input[name="isup"]:checked');
+
+  if (isNaN(age) || isNaN(psa) || !isupEl) {
+    alert('Please fill in all required fields: Age, PSA, and ISUP Grade Group.');
+    return;
+  }
+
+  const isup = parseInt(isupEl.value);
+
+  // Always compute both models (for comparison)
+  const probA = predictA(age, psa, isup);
+  let probB = null;
+
+  if (currentModel === 'B') {
+    const piradsEl = document.querySelector('input[name="pirads"]:checked');
+    if (!piradsEl) {
+      alert('Please select a PI-RADS score for Model B.');
+      return;
+    }
+    const pirads = parseInt(piradsEl.value);
+    const apex = document.getElementById('mri_apex').checked;
+    const midgland = document.getElementById('mri_midgland').checked;
+    probB = predictB(age, psa, isup, pirads, apex, midgland);
+  } else {
+    // Estimate Model B with PI-RADS <=3 and no lesion locations as baseline
+    probB = predictB(age, psa, isup, 3, false, false);
+  }
+
+  const primaryProb = currentModel === 'A' ? probA : probB;
+  displayResults(primaryProb, probA, probB, isup);
+}
+
+function displayResults(primary, probA, probB, isup) {
+  const panel = document.getElementById('resultsPanel');
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Gauge
+  const pct = (primary * 100).toFixed(1);
+  const arcLength = 251.33;
+  const offset = arcLength * (1 - primary);
+  const fill = document.getElementById('gaugeFill');
+  const color = primary < 0.3 ? 'var(--low-risk)' : primary < 0.6 ? 'var(--warning)' : 'var(--high-risk)';
+  fill.style.stroke = color;
+  fill.style.strokeDashoffset = offset;
+  document.getElementById('gaugeValue').textContent = pct + '%';
+
+  // Risk label
+  const label = document.getElementById('riskLabel');
+  label.style.display = 'inline-block';
+  if (primary < 0.3) {
+    label.textContent = 'Lower risk';
+    label.className = 'risk-label risk-low';
+  } else if (primary < 0.6) {
+    label.textContent = 'Moderate risk';
+    label.className = 'risk-label risk-moderate';
+  } else {
+    label.textContent = 'Higher risk';
+    label.className = 'risk-label risk-high';
+  }
+
+  // Comparison bars
+  const barA = document.getElementById('barA');
+  const barB = document.getElementById('barB');
+  barA.style.width = (probA * 100).toFixed(1) + '%';
+  barB.style.width = (probB * 100).toFixed(1) + '%';
+  document.getElementById('barAVal').textContent = (probA * 100).toFixed(1) + '%';
+  document.getElementById('barBVal').textContent = (probB * 100).toFixed(1) + '%';
+
+  const delta = probB - probA;
+  const deltaText = delta >= 0
+    ? '+' + (delta * 100).toFixed(1) + ' pp'
+    : (delta * 100).toFixed(1) + ' pp';
+  document.getElementById('deltaNote').textContent =
+    'Delta (B \u2212 A): ' + deltaText + ' \u2014 ' +
+    (Math.abs(delta) < 0.02 ? 'negligible difference' :
+     Math.abs(delta) < 0.05 ? 'small difference' : 'moderate difference');
+
+  if (currentModel === 'B') {
+    document.getElementById('comparisonSection').style.display = 'block';
+  } else {
+    // Still show comparison but with note
+    document.getElementById('comparisonSection').style.display = 'block';
+    document.getElementById('deltaNote').textContent +=
+      ' (Model B shown with PI-RADS \u22643, no lesion locations)';
+  }
+
+  // Highlight current grade group row
+  ['ctxGG1','ctxGG2','ctxGG3','ctxGG4','ctxGG5'].forEach((id, i) => {
+    document.getElementById(id).className = (i + 1 === isup) ? 'highlight-row' : '';
+  });
+
+  // Interpretation
+  buildInterpretation(primary, probA, probB, isup);
+}
+
+function buildInterpretation(primary, probA, probB, isup) {
+  const pct = (primary * 100).toFixed(1);
+  const cohort = COHORT_RATES[isup];
+  const observed = (cohort.rate * 100).toFixed(1);
+  let html = '';
+
+  // Main interpretation
+  html += '<div class="interp-card">';
+  html += '<h4>Patient-specific prediction</h4>';
+  html += '<p>The predicted probability of <strong>any ISUP upgrading</strong> at radical prostatectomy is <span class="highlight-stat">' + pct + '%</span>';
+
+  if (currentModel === 'A') {
+    html += ' (Model A, clinic-only).';
+  } else {
+    html += ' (Model B, clinic + MRI).';
+  }
+
+  html += ' The observed upgrading rate for GG' + isup + ' patients in the development cohort was ' + observed + '% (' + cohort.upgraded + '/' + cohort.n + ').</p>';
+  html += '</div>';
+
+  // Grade-specific context
+  html += '<div class="interp-card">';
+  html += '<h4>Grade group context</h4>';
+
+  if (isup === 1) {
+    html += '<ul>';
+    html += '<li>GG1 patients have the highest upgrading rate (77.6%) because there are more possible grades to upgrade to.</li>';
+    html += '<li>Most GG1 upgrading is to GG2 (63.2%), which may not alter management in many cases.</li>';
+    html += '<li>The clinically important GG1-to-GG3+ rate was <strong>14.4%</strong> (95% CI 10.0\u201318.8%).</li>';
+    html += '<li>Within GG1, PI-RADS 5 patients had 88.4% upgrading vs 62.9% for PI-RADS 1\u20133.</li>';
+    html += '</ul>';
+  } else if (isup === 2) {
+    html += '<ul>';
+    html += '<li>GG2 patients had a 32.4% overall upgrading rate.</li>';
+    html += '<li>26.1% were upgraded to GG3 and 6.3% to GG4/5.</li>';
+    html += '<li>GG2-to-GG3+ upgrading (major upgrading, corrected C = 0.591) remains difficult to predict.</li>';
+    html += '</ul>';
+  } else if (isup === 3) {
+    html += '<ul>';
+    html += '<li>GG3 patients had a 13.3% upgrading rate (8.4% to GG4, 4.8% to GG5).</li>';
+    html += '<li>Most GG3 patients (68.7%) had concordant pathology.</li>';
+    html += '</ul>';
+  } else if (isup === 4) {
+    html += '<ul>';
+    html += '<li>GG4 patients had only 13.7% upgrading (to GG5) but notable <strong>64.7% downgrading</strong>.</li>';
+    html += '<li>21.6% were reclassified to GG2 and 43.1% to GG3 at prostatectomy.</li>';
+    html += '<li>This high downgrading rate is consistent with the known difficulty of reliably grading Gleason pattern 4 on biopsy.</li>';
+    html += '</ul>';
+  } else {
+    html += '<p>GG5 is the highest grade group; upgrading is not possible by definition. All 8 GG5 patients remained at GG5 (50%) or were downgraded (50%).</p>';
+  }
+  html += '</div>';
+
+  // Clinical note
+  html += '<div class="interp-card">';
+  html += '<h4>Important caveats</h4>';
+  html += '<ul>';
+  html += '<li>This model predicts <strong>any upgrading</strong> (prostatectomy ISUP > biopsy ISUP), including the common GG1\u2192GG2 transition which may not change management.</li>';
+  html += '<li><strong>Clinically significant upgrading</strong> (GG1/GG2 to GG3+) had corrected C = 0.653, indicating limited predictability.</li>';
+  html += '<li>The model was developed in an RP-selected cohort (single surgeon, two Polish centers). External validation has not been performed.</li>';
+  html += '<li>MRI variables (PI-RADS, lesion location) added negligible discrimination after optimism correction (&Delta;C = +0.004).</li>';
+  html += '<li>ISUP grade group and PSA accounted for nearly all discrimination (nested comparator analysis).</li>';
+  html += '</ul>';
+  html += '</div>';
+
+  document.getElementById('interpContent').innerHTML = html;
+}
+
+function toggleInfo() {
+  const btn = document.getElementById('infoToggle');
+  const content = document.getElementById('infoContent');
+  btn.classList.toggle('open');
+  content.classList.toggle('visible');
+}
+
+function resetForm() {
+  document.getElementById('age').value = '';
+  document.getElementById('psa').value = '';
+  document.querySelectorAll('input[name="isup"]').forEach(r => r.checked = false);
+  document.querySelectorAll('input[name="pirads"]').forEach(r => r.checked = false);
+  document.getElementById('mri_apex').checked = false;
+  document.getElementById('mri_midgland').checked = false;
+  document.getElementById('mri_base').checked = false;
+  document.getElementById('resultsPanel').classList.remove('visible');
+
+  // Reset gauge
+  document.getElementById('gaugeFill').style.strokeDashoffset = '251.33';
+  document.getElementById('gaugeValue').textContent = '\u2014';
+  document.getElementById('riskLabel').style.display = 'none';
+}
+
+// Allow Enter key to calculate
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') calculate();
+});
+</script>
+
+</body>
+</html>

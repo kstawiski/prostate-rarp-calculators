@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DaVinci vs Versius &mdash; RARP Outcome Comparison</title>
+<meta name="description" content="Interactive results summary of single-surgeon DaVinci vs Versius RARP comparison using overlap weighting with falsification testing (n=602).">
+<style>
+  :root {
+    --primary: #1a365d;
+    --dv-color: #2b6cb0;
+    --vs-color: #d53f8c;
+    --bg: #f0f4f8;
+    --card-bg: #ffffff;
+    --text: #1a202c;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --border: #e2e8f0;
+    --success: #38a169;
+    --warning: #d69e2e;
+    --danger: #e53e3e;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 40%, #d53f8c 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.35rem;
+    position: relative;
+  }
+  .header .subtitle {
+    font-size: 0.88rem;
+    opacity: 0.85;
+    font-weight: 400;
+    position: relative;
+  }
+  .header .badge {
+    display: inline-block;
+    margin-top: 0.7rem;
+    padding: 0.2rem 0.7rem;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    position: relative;
+    backdrop-filter: blur(4px);
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .card-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card-title .icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    color: white;
+  }
+  .icon-blue { background: var(--dv-color); }
+  .icon-pink { background: var(--vs-color); }
+  .icon-gray { background: #718096; }
+
+  /* Platform legend */
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+  .dot-dv { background: var(--dv-color); }
+  .dot-vs { background: var(--vs-color); }
+
+  /* Key numbers */
+  .key-numbers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .key-num {
+    text-align: center;
+    padding: 0.8rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: #f7fafc;
+    border: 1px solid var(--border);
+  }
+  .key-num .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .key-num .label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.15rem;
+  }
+  .val-dv { color: var(--dv-color); }
+  .val-vs { color: var(--vs-color); }
+  .val-neutral { color: var(--text); }
+
+  /* Outcome table */
+  .outcome-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-top: 0.5rem;
+  }
+  .outcome-table th {
+    text-align: left;
+    padding: 0.55rem 0.6rem;
+    background: #edf2f7;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1.5px solid var(--border);
+    font-size: 0.78rem;
+  }
+  .outcome-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid #f0f4f8;
+    color: var(--text-secondary);
+  }
+  .outcome-table tr:last-child td { border-bottom: none; }
+  .outcome-table .primary-row {
+    background: rgba(43,108,176,0.04);
+    font-weight: 600;
+  }
+  .sig { color: var(--danger); font-weight: 700; }
+  .ns { color: var(--text-muted); }
+
+  /* Forest plot row */
+  .forest-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--radius-sm);
+  }
+  .forest-row:nth-child(odd) { background: #f7fafc; }
+  .forest-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    min-width: 100px;
+  }
+  .forest-bar-container {
+    flex: 1;
+    position: relative;
+    height: 20px;
+  }
+  .forest-midline {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--text-muted);
+    opacity: 0.4;
+  }
+  .forest-point {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    z-index: 2;
+  }
+  .forest-ci {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 3px;
+    border-radius: 2px;
+    z-index: 1;
+  }
+  .forest-ci-conc { background: var(--dv-color); }
+  .forest-ci-glob { background: var(--vs-color); }
+  .forest-point-conc { background: var(--dv-color); }
+  .forest-point-glob { background: var(--vs-color); }
+  .forest-value {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 120px;
+    text-align: right;
+    font-weight: 500;
+  }
+
+  /* Falsification */
+  .falsification-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .badge-pass { background: #f0fff4; color: #276749; }
+  .badge-fail { background: #fff5f5; color: #c53030; }
+
+  /* Learning curve */
+  .lc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .lc-item {
+    padding: 0.8rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .lc-item .case-num {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .lc-item .lc-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .lc-item .lc-detail {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-top: 0.3rem;
+  }
+
+  .interp-card {
+    background: #f7fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.2rem;
+    margin-top: 0.75rem;
+  }
+  .interp-card h4 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+  }
+  .interp-card p, .interp-card li {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .interp-card ul {
+    padding-left: 1.2rem;
+    margin-top: 0.4rem;
+  }
+  .interp-card li { margin-bottom: 0.25rem; }
+
+  .disclaimer {
+    background: #fffaf0;
+    border: 1px solid #feebc8;
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    color: #975a16;
+    line-height: 1.5;
+  }
+  .disclaimer strong { color: #c05621; }
+
+  .footer {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .header { padding: 1.5rem 1rem; }
+    .header h1 { font-size: 1.25rem; }
+    .container { padding: 1rem 0.75rem; }
+    .card { padding: 1.2rem; }
+    .lc-grid { grid-template-columns: 1fr; }
+    .key-numbers { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>DaVinci vs Versius &mdash; RARP Outcomes</h1>
+  <div class="subtitle">Single-Surgeon Risk-Adjusted Comparison with Falsification Testing</div>
+  <div class="badge">n = 602 &middot; Overlap Weighting &middot; IDEAL Stage 2a</div>
+</div>
+
+<div class="container">
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot dot-dv"></div> DaVinci (n=345)</div>
+    <div class="legend-item"><div class="legend-dot dot-vs"></div> Versius (n=257)</div>
+  </div>
+
+  <!-- Key numbers -->
+  <div class="card">
+    <div class="card-title"><span class="icon icon-gray">S</span> Study overview</div>
+    <div class="key-numbers">
+      <div class="key-num">
+        <div class="value val-neutral">602</div>
+        <div class="label">Total RARP</div>
+      </div>
+      <div class="key-num">
+        <div class="value val-dv">345</div>
+        <div class="label">DaVinci</div>
+      </div>
+      <div class="key-num">
+        <div class="value val-vs">257</div>
+        <div class="label">Versius</div>
+      </div>
+      <div class="key-num">
+        <div class="value val-neutral">55</div>
+        <div class="label">Concurrent (primary)</div>
+      </div>
+      <div class="key-num">
+        <div class="value val-neutral">1</div>
+        <div class="label">Surgeon</div>
+      </div>
+    </div>
+    <div class="interp-card" style="margin-top:0.5rem">
+      <p>Single-surgeon series (2021&ndash;2025) with severe temporal separation: 90% of Versius cases in 2022&ndash;2023, 94% of DaVinci in 2024&ndash;2025. Only two calendar quarters (2024 Q1&ndash;Q2, n=55) had concurrent cases, forming the primary analysis.</p>
+    </div>
+  </div>
+
+  <!-- Primary analysis -->
+  <div class="card">
+    <div class="card-title"><span class="icon icon-blue">1</span> Primary analysis: concurrent-quarter overlap weighting (n=55)</div>
+    <table class="outcome-table">
+      <thead>
+        <tr>
+          <th>Outcome</th>
+          <th>DaVinci</th>
+          <th>Versius</th>
+          <th>Estimate</th>
+          <th>95% CI</th>
+          <th>p</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="primary-row">
+          <td>PSM rate</td>
+          <td>38.3%</td>
+          <td>22.5%</td>
+          <td>OR 0.47</td>
+          <td>0.12&ndash;1.86</td>
+          <td class="ns">0.28</td>
+        </tr>
+        <tr>
+          <td>Operative time</td>
+          <td>135.8 min</td>
+          <td>129.8 min</td>
+          <td>&minus;5.9 min</td>
+          <td>&minus;20.8 to +9.0</td>
+          <td class="ns">0.44</td>
+        </tr>
+        <tr>
+          <td>Blood loss</td>
+          <td>404.5 mL</td>
+          <td>375.2 mL</td>
+          <td>&minus;29.3 mL</td>
+          <td>&minus;69.1 to +10.5</td>
+          <td class="ns">0.16</td>
+        </tr>
+        <tr>
+          <td>Hospital stay</td>
+          <td>4.08 days</td>
+          <td>4.00 days</td>
+          <td>&minus;0.08 days</td>
+          <td>&minus;0.17 to +0.01</td>
+          <td class="ns">0.09</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="interp-card">
+      <h4>Interpretation</h4>
+      <p>No statistically significant differences detected for any outcome. Wide confidence intervals reflect limited effective sample sizes (ESS: DaVinci ~28, Versius ~18). The study was <strong>underpowered</strong> to detect clinically meaningful differences.</p>
+    </div>
+  </div>
+
+  <!-- Global OW (secondary) -->
+  <div class="card">
+    <div class="card-title"><span class="icon icon-pink">2</span> Secondary analysis: global overlap weighting (all patients)</div>
+    <table class="outcome-table">
+      <thead>
+        <tr>
+          <th>Outcome</th>
+          <th>DaVinci</th>
+          <th>Versius</th>
+          <th>Estimate</th>
+          <th>95% CI</th>
+          <th>p</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>PSM rate</td>
+          <td>45.0%</td>
+          <td>19.1%</td>
+          <td>OR 0.29</td>
+          <td>0.15&ndash;0.54</td>
+          <td class="sig">&lt;0.001</td>
+        </tr>
+        <tr>
+          <td>Operative time</td>
+          <td>183.6 min</td>
+          <td>156.3 min</td>
+          <td>&minus;27.3 min</td>
+          <td>&minus;43.3 to &minus;11.2</td>
+          <td class="sig">0.001</td>
+        </tr>
+        <tr>
+          <td>Blood loss</td>
+          <td>418.0 mL</td>
+          <td>410.1 mL</td>
+          <td>&minus;7.9 mL</td>
+          <td>&minus;49.5 to +33.7</td>
+          <td class="ns">0.71</td>
+        </tr>
+        <tr>
+          <td>Hospital stay</td>
+          <td>4.44 days</td>
+          <td>4.29 days</td>
+          <td>&minus;0.15 days</td>
+          <td>&minus;0.39 to +0.09</td>
+          <td class="ns">0.22</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="interp-card">
+      <h4>Caution: residual confounding</h4>
+      <p>The global analysis shows apparent Versius advantages for PSM and operative time, but the falsification analysis below reveals residual temporal confounding. These results should be interpreted with <strong>extreme caution</strong>.</p>
+    </div>
+  </div>
+
+  <!-- Falsification -->
+  <div class="card">
+    <div class="card-title"><span class="icon icon-gray">F</span> Falsification (negative-control) analysis</div>
+    <p style="font-size:0.84rem;color:var(--text-secondary);margin-bottom:0.8rem">
+      Negative-control outcomes (pT3+, SVI, postop ISUP&ge;3) are pathology-biology variables not plausibly caused by the robotic platform. Significant platform effects indicate inadequate confounding control.
+    </p>
+    <table class="outcome-table">
+      <thead>
+        <tr>
+          <th>Negative control</th>
+          <th>Global OW</th>
+          <th>p</th>
+          <th>Status</th>
+          <th>Concurrent OW</th>
+          <th>p</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>pT3+ rate</td>
+          <td>OR 1.19</td>
+          <td class="ns">0.54</td>
+          <td><span class="falsification-badge badge-pass">PASS</span></td>
+          <td>OR 1.31</td>
+          <td class="ns">0.66</td>
+          <td><span class="falsification-badge badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>SVI rate</td>
+          <td>OR 1.07</td>
+          <td class="ns">0.86</td>
+          <td><span class="falsification-badge badge-pass">PASS</span></td>
+          <td>OR 0.27</td>
+          <td class="ns">0.27</td>
+          <td><span class="falsification-badge badge-pass">PASS</span></td>
+        </tr>
+        <tr>
+          <td>Postop ISUP &ge;3</td>
+          <td>OR 1.89</td>
+          <td class="sig">0.025</td>
+          <td><span class="falsification-badge badge-fail">FAIL</span></td>
+          <td>OR 1.06</td>
+          <td class="ns">0.92</td>
+          <td><span class="falsification-badge badge-pass">PASS</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="interp-card">
+      <h4>Key finding</h4>
+      <p>The ISUP &ge;3 negative control <strong>fails</strong> in the global OW analysis (OR=1.89, p=0.025) but passes in the concurrent-quarter analysis (OR=1.06, p=0.92). This confirms residual temporal confounding in the global comparison and validates the concurrent-quarter analysis as the more trustworthy estimand.</p>
+    </div>
+  </div>
+
+  <!-- Learning curves -->
+  <div class="card">
+    <div class="card-title"><span class="icon icon-gray">L</span> Learning curve breakpoints (PELT changepoint detection)</div>
+    <div class="lc-grid">
+      <div class="lc-item" style="border-color:var(--dv-color)">
+        <div class="case-num val-dv">Case 11</div>
+        <div class="lc-label">DaVinci OR time breakpoint</div>
+        <div class="lc-detail">250 &rarr; 161 min</div>
+      </div>
+      <div class="lc-item" style="border-color:var(--vs-color)">
+        <div class="case-num val-vs">Case 15</div>
+        <div class="lc-label">Versius OR time breakpoint</div>
+        <div class="lc-detail">253 &rarr; 166 min</div>
+      </div>
+      <div class="lc-item" style="border-color:var(--dv-color)">
+        <div class="case-num val-dv">Case 16</div>
+        <div class="lc-label">DaVinci blood loss breakpoint</div>
+        <div class="lc-detail">500 &rarr; 294 mL</div>
+      </div>
+      <div class="lc-item" style="border-color:var(--vs-color)">
+        <div class="case-num val-vs">Case 10</div>
+        <div class="lc-label">Versius blood loss breakpoint</div>
+        <div class="lc-detail">515 &rarr; 420 mL</div>
+      </div>
+    </div>
+    <div class="interp-card">
+      <h4>Cross-platform skill transfer</h4>
+      <p>Similar breakpoint timing (~11&ndash;15 cases) is consistent with transferability of robotic surgical skills. The surgeon began Versius cases after only 13 DaVinci procedures. Versius operative time decreased from median 245 min (first 15 cases) to 155 min (after case 50), approaching the DaVinci mature median of 160 min. No PSM breakpoints were detected for either platform.</p>
+    </div>
+  </div>
+
+  <!-- Bottom line -->
+  <div class="card">
+    <div class="card-title"><span class="icon icon-gray">B</span> Bottom line</div>
+    <div class="interp-card" style="background:white;border:none;padding:0">
+      <ul>
+        <li>The <strong>concurrent-quarter comparison</strong> (n=55) detected no significant differences between platforms for any perioperative outcome, but was underpowered.</li>
+        <li>The <strong>global analysis</strong> suggested Versius advantages for PSM and operative time, but falsification testing revealed residual confounding (ISUP &ge;3 signal, p=0.025).</li>
+        <li><strong>Learning curves</strong> showed similar breakpoint timing for both platforms (~11&ndash;15 cases for operative time), consistent with cross-platform skill transfer.</li>
+        <li>The <strong>blood loss paradox</strong> (unadjusted DaVinci 200 vs Versius 400 mL) was resolved by temporal stratification: both platforms showed 400 mL in concurrent quarters.</li>
+        <li>These findings are consistent with Versius as a <strong>feasible platform</strong> for RARP, but definitive comparison requires larger multicenter studies with contemporaneous designs.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Research summary &mdash; not a clinical tool.</strong>
+    This page presents results from a single-surgeon, single-institution observational study (n=602). The primary comparison was severely underpowered (concurrent n=55, ESS ~28/18). IDEAL Stage 2a evidence; definitive conclusions require multicenter Stage 3 studies. No calculator is provided because this is a comparative study, not a prediction model.
+  </div>
+
+  <div class="footer">
+    Jobczyk M, Clinton TN, De Carvalho FL, Stawiski K.<br>
+    <em>Single-Surgeon Adoption of Two Robotic Platforms for RARP:</em><br>
+    <em>Risk-Adjusted Learning Curves and Contemporaneous Outcome Comparison.</em><br>
+    (submitted 2026)
+  </div>
+
+</div>
+
+</body>
+</html>

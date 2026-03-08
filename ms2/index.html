@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPE Risk Calculator</title>
+<meta name="description" content="Predicts probability of extraprostatic extension (EPE) after radical prostatectomy. Based on LASSO logistic regression with bootstrap-corrected internal validation (n=492).">
+<style>
+  :root {
+    --primary: #1a365d;
+    --primary-light: #2a4a7f;
+    --primary-lighter: #3b6cb5;
+    --accent: #2b6cb0;
+    --accent-light: #4299e1;
+    --bg: #f0f4f8;
+    --card-bg: #ffffff;
+    --text: #1a202c;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --border: #e2e8f0;
+    --border-focus: #4299e1;
+    --low-risk: #38a169;
+    --moderate-risk: #d69e2e;
+    --high-risk: #e53e3e;
+    --gauge-track: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a365d 0%, #2d3748 50%, #553c9a 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.35rem;
+    position: relative;
+  }
+  .header .subtitle {
+    font-size: 0.88rem;
+    opacity: 0.85;
+    font-weight: 400;
+    position: relative;
+  }
+  .header .badge {
+    display: inline-block;
+    margin-top: 0.7rem;
+    padding: 0.2rem 0.7rem;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    position: relative;
+    backdrop-filter: blur(4px);
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .card-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card-title .icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #553c9a;
+    color: white;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.1rem;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+  .form-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+  }
+  .form-label .unit {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+  .form-input {
+    padding: 0.65rem 0.85rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--text);
+    background: #fafbfc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(66,153,225,0.15);
+    background: white;
+  }
+  .form-input::-webkit-inner-spin-button { opacity: 1; }
+
+  .radio-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .radio-btn {
+    flex: 1;
+    min-width: 0;
+  }
+  .radio-btn input { display: none; }
+  .radio-btn label {
+    display: block;
+    padding: 0.55rem 0.5rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fafbfc;
+    color: var(--text-secondary);
+  }
+  .radio-btn input:checked + label {
+    border-color: #553c9a;
+    background: rgba(85,60,154,0.08);
+    color: #553c9a;
+    font-weight: 600;
+  }
+  .radio-btn label:hover {
+    border-color: #805ad5;
+    background: rgba(85,60,154,0.04);
+  }
+
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    margin-top: 0.3rem;
+  }
+  .checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #553c9a;
+    cursor: pointer;
+  }
+  .checkbox-item span {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .core-ratio-helper {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    gap: 0.5rem;
+    align-items: end;
+    margin-top: 0.5rem;
+  }
+  .core-ratio-helper .form-group { margin-bottom: 0; }
+  .core-ratio-helper .divider {
+    font-size: 1.4rem;
+    color: var(--text-muted);
+    padding-bottom: 0.5rem;
+    font-weight: 300;
+  }
+  .core-ratio-result {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    padding-bottom: 0.6rem;
+    font-weight: 600;
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .calc-btn {
+    display: block;
+    width: 100%;
+    padding: 0.9rem;
+    background: linear-gradient(135deg, #553c9a 0%, #2d3748 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+  }
+  .calc-btn:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .calc-btn:active { transform: translateY(0); }
+
+  .results-panel { display: none; }
+  .results-panel.visible { display: block; }
+
+  .result-main {
+    text-align: center;
+    padding: 1.5rem;
+  }
+
+  .gauge-container {
+    position: relative;
+    width: 200px;
+    height: 120px;
+    margin: 0 auto 1rem;
+  }
+  .gauge-svg {
+    width: 200px;
+    height: 120px;
+  }
+  .gauge-track {
+    fill: none;
+    stroke: var(--gauge-track);
+    stroke-width: 14;
+    stroke-linecap: round;
+  }
+  .gauge-fill {
+    fill: none;
+    stroke-width: 14;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease-out, stroke 0.4s;
+  }
+  .gauge-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    fill: var(--text);
+    text-anchor: middle;
+    dominant-baseline: auto;
+  }
+  .gauge-label-text {
+    font-size: 0.72rem;
+    fill: var(--text-muted);
+    text-anchor: middle;
+    dominant-baseline: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .risk-label {
+    display: inline-block;
+    padding: 0.25rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .risk-low { background: #f0fff4; color: #276749; }
+  .risk-moderate { background: #fffff0; color: #975a16; }
+  .risk-high { background: #fff5f5; color: #c53030; }
+
+  /* OR contribution bars */
+  .contrib-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .contrib-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .contrib-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.45rem;
+  }
+  .contrib-label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    min-width: 90px;
+    text-align: right;
+    font-weight: 500;
+  }
+  .contrib-bar-track {
+    flex: 1;
+    height: 16px;
+    background: var(--gauge-track);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+  .contrib-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    transition: width 0.6s ease-out;
+    min-width: 2px;
+  }
+  .contrib-bar-fill.positive { background: linear-gradient(90deg, #e53e3e, #c53030); }
+  .contrib-bar-fill.negative { background: linear-gradient(90deg, #38a169, #276749); }
+  .contrib-bar-fill.neutral { background: linear-gradient(90deg, #a0aec0, #718096); }
+  .contrib-or {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    min-width: 50px;
+    font-weight: 600;
+  }
+
+  .interp-card {
+    background: #f7fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.2rem;
+    margin-top: 0.75rem;
+  }
+  .interp-card h4 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+  }
+  .interp-card p, .interp-card li {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .interp-card ul {
+    padding-left: 1.2rem;
+    margin-top: 0.4rem;
+  }
+  .interp-card li { margin-bottom: 0.25rem; }
+  .highlight-stat {
+    display: inline-block;
+    font-weight: 700;
+    color: #553c9a;
+  }
+
+  .context-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-top: 0.5rem;
+  }
+  .context-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    background: #edf2f7;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+  }
+  .context-table td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid #f0f4f8;
+    color: var(--text-secondary);
+  }
+  .context-table tr:last-child td { border-bottom: none; }
+
+  .info-section { margin-top: 0.5rem; }
+  .info-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: none;
+    border: none;
+    color: #553c9a;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.5rem 0;
+    font-family: inherit;
+  }
+  .info-toggle .arrow {
+    transition: transform 0.2s;
+    font-size: 0.7rem;
+  }
+  .info-toggle.open .arrow { transform: rotate(90deg); }
+  .info-content {
+    display: none;
+    padding: 0.75rem 0;
+  }
+  .info-content.visible { display: block; }
+
+  .disclaimer {
+    background: #fffaf0;
+    border: 1px solid #feebc8;
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    color: #975a16;
+    line-height: 1.5;
+  }
+  .disclaimer strong { color: #c05621; }
+
+  .footer {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .footer a { color: #553c9a; text-decoration: none; }
+
+  .reset-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.4rem 0.8rem;
+    font-family: inherit;
+    transition: all 0.2s;
+    margin-top: 0.75rem;
+  }
+  .reset-btn:hover {
+    border-color: var(--high-risk);
+    color: var(--high-risk);
+  }
+
+  @media (max-width: 640px) {
+    .header { padding: 1.5rem 1rem; }
+    .header h1 { font-size: 1.3rem; }
+    .form-grid { grid-template-columns: 1fr; }
+    .container { padding: 1rem 0.75rem; }
+    .card { padding: 1.2rem; }
+    .radio-group { gap: 0.35rem; }
+    .radio-btn label { padding: 0.5rem 0.3rem; font-size: 0.8rem; }
+    .core-ratio-helper { grid-template-columns: 1fr auto 1fr auto; }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .results-panel.visible { animation: fadeIn 0.35s ease-out; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>EPE Risk Calculator</h1>
+  <div class="subtitle">Preoperative Prediction of Extraprostatic Extension After Radical Prostatectomy</div>
+  <div class="badge">n = 492 &middot; LASSO Logistic Regression &middot; Bootstrap Corrected (B = 200)</div>
+</div>
+
+<div class="container">
+
+  <!-- Input card -->
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span> Clinical parameters</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="age">Age <span class="unit">(years)</span></label>
+        <input type="number" class="form-input" id="age" min="30" max="90" step="1" placeholder="e.g. 66">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="psa">PSA <span class="unit">(ng/mL)</span></label>
+        <input type="number" class="form-input" id="psa" min="0" max="200" step="0.1" placeholder="e.g. 7.3">
+      </div>
+      <div class="form-group full-width">
+        <label class="form-label">Biopsy ISUP Grade Group</label>
+        <div class="radio-group">
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg1" value="1">
+            <label for="gg1">GG1<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">3+3</span></label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg2" value="2">
+            <label for="gg2">GG2<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">3+4</span></label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg3" value="3">
+            <label for="gg3">GG3<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+3</span></label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg4" value="4">
+            <label for="gg4">GG4<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+4</span></label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="isup" id="gg5" value="5">
+            <label for="gg5">GG5<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+5/5+5</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MRI card -->
+  <div class="card">
+    <div class="card-title"><span class="icon">2</span> MRI parameters</div>
+    <div class="form-grid">
+      <div class="form-group full-width">
+        <label class="form-label">Maximum PI-RADS Score</label>
+        <div class="radio-group">
+          <div class="radio-btn">
+            <input type="radio" name="pirads" id="pirads3" value="3">
+            <label for="pirads3">&le; 3</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="pirads" id="pirads4" value="4">
+            <label for="pirads4">4</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="pirads" id="pirads5" value="5">
+            <label for="pirads5">5</label>
+          </div>
+        </div>
+      </div>
+      <div class="form-group full-width">
+        <label class="checkbox-item">
+          <input type="checkbox" id="mri_any">
+          <span>Any MRI-detected lesion present</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Biopsy card -->
+  <div class="card">
+    <div class="card-title"><span class="icon">3</span> Biopsy core ratio</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="core_ratio">Positive Core Ratio <span class="unit">(0.0 &ndash; 1.0)</span></label>
+        <input type="number" class="form-input" id="core_ratio" min="0" max="1" step="0.01" placeholder="e.g. 0.30">
+      </div>
+      <div class="form-group">
+        <div class="form-label" style="visibility:hidden">Helper</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);padding:0.65rem 0">
+          or calculate below &darr;
+        </div>
+      </div>
+    </div>
+    <div class="core-ratio-helper">
+      <div class="form-group">
+        <label class="form-label" for="pos_cores">Positive cores</label>
+        <input type="number" class="form-input" id="pos_cores" min="0" max="50" step="1" placeholder="e.g. 4" oninput="computeRatio()">
+      </div>
+      <div class="divider">/</div>
+      <div class="form-group">
+        <label class="form-label" for="total_cores">Total cores</label>
+        <input type="number" class="form-input" id="total_cores" min="1" max="50" step="1" placeholder="e.g. 12" oninput="computeRatio()">
+      </div>
+      <div class="core-ratio-result" id="ratioDisplay">= —</div>
+    </div>
+  </div>
+
+  <!-- Calculate -->
+  <button class="calc-btn" onclick="calculate()">Calculate EPE Risk</button>
+  <div style="text-align:center">
+    <button class="reset-btn" onclick="resetForm()">&#8634; Reset</button>
+  </div>
+
+  <!-- Results -->
+  <div class="results-panel" id="resultsPanel">
+
+    <div class="card">
+      <div class="card-title"><span class="icon">R</span> Predicted EPE probability</div>
+      <div class="result-main">
+        <div class="gauge-container">
+          <svg class="gauge-svg" viewBox="0 0 200 120">
+            <path class="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" />
+            <path class="gauge-fill" id="gaugeFill" d="M 20 100 A 80 80 0 0 1 180 100"
+              stroke-dasharray="251.33" stroke-dashoffset="251.33" />
+            <text x="100" y="92" class="gauge-value" id="gaugeValue">&mdash;</text>
+            <text x="100" y="110" class="gauge-label-text">probability</text>
+          </svg>
+        </div>
+        <div id="riskLabel" class="risk-label" style="display:none">&mdash;</div>
+      </div>
+
+      <!-- Predictor contributions -->
+      <div class="contrib-section" id="contribSection">
+        <div class="contrib-title">Predictor contributions (odds ratio)</div>
+        <div id="contribBars"></div>
+      </div>
+    </div>
+
+    <!-- Interpretation -->
+    <div class="card" id="interpCard">
+      <div class="card-title"><span class="icon">i</span> Interpretation</div>
+      <div id="interpContent"></div>
+    </div>
+
+    <!-- Spatial context -->
+    <div class="card">
+      <div class="card-title"><span class="icon">S</span> Spatial context (if EPE present)</div>
+      <div class="interp-card" style="background:white;border:none;padding:0">
+        <p style="margin-bottom:0.5rem">If EPE is present, its anatomic distribution in the development cohort (70 patients with site data) was:</p>
+        <table class="context-table">
+          <thead>
+            <tr><th>EPE Site</th><th>Frequency</th><th>95% CI</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Radial (peripheral)</td><td><strong>51.4%</strong></td><td>39.2&ndash;63.6%</td></tr>
+            <tr><td>NVB</td><td><strong>28.6%</strong></td><td>18.4&ndash;40.6%</td></tr>
+            <tr><td>Base</td><td><strong>24.3%</strong></td><td>14.8&ndash;36.0%</td></tr>
+            <tr><td>Posterior</td><td><strong>24.3%</strong></td><td>14.8&ndash;36.0%</td></tr>
+            <tr><td>Apex</td><td><strong>17.1%</strong></td><td>9.2&ndash;28.0%</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:0.7rem;font-size:0.78rem;color:var(--text-muted)">
+          Note: MRI lesion location showed weak, non-significant topographic concordance with EPE site (apex sensitivity 9.1%, base sensitivity 6.2%). MRI detects the dominant lesion but EPE frequently occurs at sites not identified on imaging.
+        </p>
+      </div>
+    </div>
+
+    <!-- PSM context -->
+    <div class="card">
+      <div class="card-title"><span class="icon">M</span> Positive margin context</div>
+      <div class="interp-card" style="background:white;border:none;padding:0">
+        <p style="margin-bottom:0.5rem">PSM and EPE have distinct spatial distributions. PSM is apex-dominant; EPE is radial/NVB-dominant:</p>
+        <table class="context-table">
+          <thead>
+            <tr><th>Site</th><th>PSM frequency</th><th>EPE frequency</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Apex</td><td><strong>69.3%</strong></td><td>17.1%</td></tr>
+            <tr><td>Radial</td><td>&mdash;</td><td><strong>51.4%</strong></td></tr>
+            <tr><td>NVB</td><td>6.7%</td><td><strong>28.6%</strong></td></tr>
+            <tr><td>Base</td><td>10.7%</td><td>24.3%</td></tr>
+            <tr><td>Bladder neck</td><td>14.7%</td><td>&mdash;</td></tr>
+            <tr><td>Posterior</td><td>8.0%</td><td>24.3%</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:0.7rem;font-size:0.78rem;color:var(--text-muted)">
+          Among 12 patients with apical PSM and dual site data, 75% had PSM without concurrent apical EPE, suggesting a predominantly technique-driven origin for apical margins. EPE-PSM co-location was observed in only 40% of cases (6/15 with dual data).
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model details -->
+  <div class="info-section">
+    <button class="info-toggle" id="infoToggle" onclick="toggleInfo()">
+      <span class="arrow">&#9654;</span> Model details &amp; validation
+    </button>
+    <div class="info-content" id="infoContent">
+      <div class="card" style="margin-top:0.5rem">
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.8rem">EPE Prediction Model</h4>
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.5rem">
+          logit(P) = &minus;3.628 + 0.014 &times; age + 0.026 &times; PSA + 0.351 &times; GG2 + 0.978 &times; GG3+ + 0.542 &times; PI-RADS4 + 1.279 &times; PI-RADS5 + 1.712 &times; core_ratio &minus; 0.085 &times; MRI_lesion
+        </p>
+        <table class="context-table">
+          <thead><tr><th>Predictor</th><th>Log-OR</th><th>OR</th><th>95% CI</th><th>p</th></tr></thead>
+          <tbody>
+            <tr><td>Intercept</td><td>&minus;3.628</td><td>&mdash;</td><td>&mdash;</td><td>0.002</td></tr>
+            <tr><td>Age (per year)</td><td>0.014</td><td>1.01</td><td>0.98&ndash;1.05</td><td>0.391</td></tr>
+            <tr><td>PSA (per ng/mL)</td><td>0.026</td><td>1.03</td><td>0.99&ndash;1.06</td><td>0.166</td></tr>
+            <tr><td>ISUP GG2 (vs GG1)</td><td>0.351</td><td>1.42</td><td>0.88&ndash;2.30</td><td>0.152</td></tr>
+            <tr><td>ISUP GG3+ (vs GG1)</td><td>0.978</td><td>2.66</td><td>1.56&ndash;4.53</td><td>&lt;0.001</td></tr>
+            <tr><td>PI-RADS 4 (vs &le;3)</td><td>0.542</td><td>1.72</td><td>0.79&ndash;3.73</td><td>0.171</td></tr>
+            <tr><td>PI-RADS 5 (vs &le;3)</td><td>1.279</td><td>3.59</td><td>1.64&ndash;7.87</td><td>0.001</td></tr>
+            <tr><td>Core ratio (0&ndash;1)</td><td>1.712</td><td>5.54</td><td>2.29&ndash;13.42</td><td>&lt;0.001</td></tr>
+            <tr><td>MRI any lesion</td><td>&minus;0.085</td><td>0.92</td><td>0.54&ndash;1.56</td><td>0.753</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">
+          Corrected AUC: <strong>0.714</strong> (apparent 0.731, optimism 0.017) &middot;
+          Corrected Brier: 0.200<br>
+          n = 492 complete cases &middot; 174 EPE events (35.4%) &middot; Bootstrap B = 200<br>
+          LASSO retained all 8 candidate predictors at lambda.min
+        </p>
+
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Cohort Overview</h4>
+        <table class="context-table">
+          <thead><tr><th>Characteristic</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Total cohort</td><td>604 patients (99.7% robot-assisted)</td></tr>
+            <tr><td>PSM evaluable</td><td>587 patients; PSM+ = 168 (28.6%)</td></tr>
+            <tr><td>EPE evaluable</td><td>601 patients; EPE+ = 214 (35.6%)</td></tr>
+            <tr><td>pT2</td><td>375 (62.7%)</td></tr>
+            <tr><td>pT3a (EPE without SVI)</td><td>136 (22.7%)</td></tr>
+            <tr><td>pT3b (SVI)</td><td>80 (13.4%)</td></tr>
+            <tr><td>pT4</td><td>5 (0.8%)</td></tr>
+            <tr><td>PSM by pT stage</td><td>pT2: 23.3%, pT3a: 33.1%, pT3b: 44.9%, pT4: 80%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Research tool &mdash; not for clinical decision-making.</strong>
+    This calculator implements a model from a single-center consecutive series (n = 604, 492 complete cases). It has undergone bootstrap-corrected internal validation (corrected AUC = 0.714) but not external validation. The model provides moderate discrimination; individual predictions should be interpreted with caution and not replace clinical judgment or established staging tools such as the Partin tables.
+  </div>
+
+  <div class="footer">
+    Jobczyk M, Clinton TN, De Carvalho FL, Stawiski K.<br>
+    <em>Spatial Mapping of Positive Surgical Margins and Extraprostatic Extension</em><br>
+    <em>After Radical Prostatectomy: A Single-Center Consecutive Series of 604 Patients.</em><br>
+    (submitted 2026)
+  </div>
+
+</div>
+
+<script>
+// ── EPE Model coefficients (complete-case logistic regression, LASSO-selected) ──
+const MODEL = {
+  intercept: -3.6283413204,
+  age: 0.0142226237,
+  psa: 0.0256529997,
+  gg2: 0.3513035485,
+  gg3plus: 0.9776127481,
+  pirads4: 0.5419277508,
+  pirads5: 1.2793209549,
+  core_ratio: 1.7117365032,
+  mri_any: -0.0852592203
+};
+
+// Odds ratios for contribution display
+const ORS = {
+  age: { or: 1.01, label: 'Age', per: 'per year' },
+  psa: { or: 1.03, label: 'PSA', per: 'per ng/mL' },
+  gg2: { or: 1.42, label: 'ISUP GG2' },
+  gg3plus: { or: 2.66, label: 'ISUP GG3+' },
+  pirads4: { or: 1.72, label: 'PI-RADS 4' },
+  pirads5: { or: 3.59, label: 'PI-RADS 5' },
+  core_ratio: { or: 5.54, label: 'Core ratio' },
+  mri_any: { or: 0.92, label: 'MRI lesion' }
+};
+
+function logistic(lp) {
+  return Math.exp(lp) / (1 + Math.exp(lp));
+}
+
+function computeRatio() {
+  const pos = parseInt(document.getElementById('pos_cores').value);
+  const total = parseInt(document.getElementById('total_cores').value);
+  const display = document.getElementById('ratioDisplay');
+  if (!isNaN(pos) && !isNaN(total) && total > 0) {
+    const ratio = pos / total;
+    display.textContent = '= ' + ratio.toFixed(2);
+    document.getElementById('core_ratio').value = ratio.toFixed(2);
+  } else {
+    display.textContent = '= \u2014';
+  }
+}
+
+function calculate() {
+  const age = parseFloat(document.getElementById('age').value);
+  const psa = parseFloat(document.getElementById('psa').value);
+  const isupEl = document.querySelector('input[name="isup"]:checked');
+  const piradsEl = document.querySelector('input[name="pirads"]:checked');
+  const coreRatio = parseFloat(document.getElementById('core_ratio').value);
+  const mriAny = document.getElementById('mri_any').checked ? 1 : 0;
+
+  if (isNaN(age) || isNaN(psa) || !isupEl || !piradsEl || isNaN(coreRatio)) {
+    alert('Please fill in all required fields: Age, PSA, ISUP Grade Group, PI-RADS score, and Core Ratio.');
+    return;
+  }
+
+  const isup = parseInt(isupEl.value);
+  const pirads = parseInt(piradsEl.value);
+
+  const gg2 = isup === 2 ? 1 : 0;
+  const gg3p = isup >= 3 ? 1 : 0;
+  const p4 = pirads === 4 ? 1 : 0;
+  const p5 = pirads === 5 ? 1 : 0;
+
+  const lp = MODEL.intercept
+    + MODEL.age * age
+    + MODEL.psa * psa
+    + MODEL.gg2 * gg2
+    + MODEL.gg3plus * gg3p
+    + MODEL.pirads4 * p4
+    + MODEL.pirads5 * p5
+    + MODEL.core_ratio * coreRatio
+    + MODEL.mri_any * mriAny;
+
+  const prob = logistic(lp);
+  displayResults(prob, isup, pirads, coreRatio, mriAny, age, psa);
+}
+
+function displayResults(prob, isup, pirads, coreRatio, mriAny, age, psa) {
+  const panel = document.getElementById('resultsPanel');
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const pct = (prob * 100).toFixed(1);
+  const arcLength = 251.33;
+  const offset = arcLength * (1 - prob);
+  const fill = document.getElementById('gaugeFill');
+  const color = prob < 0.25 ? 'var(--low-risk)' : prob < 0.50 ? 'var(--moderate-risk)' : 'var(--high-risk)';
+  fill.style.stroke = color;
+  fill.style.strokeDashoffset = offset;
+  document.getElementById('gaugeValue').textContent = pct + '%';
+
+  const label = document.getElementById('riskLabel');
+  label.style.display = 'inline-block';
+  if (prob < 0.25) {
+    label.textContent = 'Lower risk of EPE';
+    label.className = 'risk-label risk-low';
+  } else if (prob < 0.50) {
+    label.textContent = 'Moderate risk of EPE';
+    label.className = 'risk-label risk-moderate';
+  } else {
+    label.textContent = 'Higher risk of EPE';
+    label.className = 'risk-label risk-high';
+  }
+
+  // Contribution bars
+  const contributions = [];
+  // Only show active predictors
+  if (isup === 2) contributions.push({ label: 'ISUP GG2', or: 1.42, beta: MODEL.gg2 });
+  if (isup >= 3) contributions.push({ label: 'ISUP GG3+', or: 2.66, beta: MODEL.gg3plus });
+  if (pirads === 4) contributions.push({ label: 'PI-RADS 4', or: 1.72, beta: MODEL.pirads4 });
+  if (pirads === 5) contributions.push({ label: 'PI-RADS 5', or: 3.59, beta: MODEL.pirads5 });
+  contributions.push({ label: 'Core ratio', or: Math.exp(MODEL.core_ratio * coreRatio), beta: MODEL.core_ratio * coreRatio, note: '(' + coreRatio.toFixed(2) + ')' });
+  contributions.push({ label: 'Age', or: Math.exp(MODEL.age * age) / Math.exp(MODEL.age * 66), beta: MODEL.age * (age - 66), note: 'vs median 66y' });
+  contributions.push({ label: 'PSA', or: Math.exp(MODEL.psa * psa) / Math.exp(MODEL.psa * 7.3), beta: MODEL.psa * (psa - 7.3), note: 'vs median 7.3' });
+  if (mriAny) contributions.push({ label: 'MRI lesion', or: 0.92, beta: MODEL.mri_any });
+
+  // Sort by absolute beta descending
+  contributions.sort((a, b) => Math.abs(b.beta) - Math.abs(a.beta));
+
+  const maxBeta = Math.max(...contributions.map(c => Math.abs(c.beta)), 0.01);
+  let barsHtml = '';
+  contributions.forEach(c => {
+    const width = Math.max(2, (Math.abs(c.beta) / maxBeta) * 100);
+    const cls = c.beta > 0.01 ? 'positive' : c.beta < -0.01 ? 'negative' : 'neutral';
+    const orText = c.or !== undefined ? c.or.toFixed(2) : '';
+    barsHtml += '<div class="contrib-row">';
+    barsHtml += '<span class="contrib-label">' + c.label + '</span>';
+    barsHtml += '<div class="contrib-bar-track"><div class="contrib-bar-fill ' + cls + '" style="width:' + width.toFixed(0) + '%"></div></div>';
+    barsHtml += '<span class="contrib-or">' + (c.note || '') + '</span>';
+    barsHtml += '</div>';
+  });
+  document.getElementById('contribBars').innerHTML = barsHtml;
+
+  buildInterpretation(prob, isup, pirads, coreRatio, mriAny);
+}
+
+function buildInterpretation(prob, isup, pirads, coreRatio, mriAny) {
+  const pct = (prob * 100).toFixed(1);
+  let html = '';
+
+  html += '<div class="interp-card">';
+  html += '<h4>Patient-specific prediction</h4>';
+  html += '<p>The predicted probability of <strong>extraprostatic extension</strong> at radical prostatectomy is <span class="highlight-stat">' + pct + '%</span>. ';
+  html += 'The overall EPE rate in the development cohort was 35.6% (214/601).</p>';
+  html += '</div>';
+
+  // Key driver
+  html += '<div class="interp-card">';
+  html += '<h4>Key predictors for this patient</h4>';
+  html += '<ul>';
+
+  if (coreRatio >= 0.5) {
+    html += '<li>High positive core ratio (' + coreRatio.toFixed(2) + ') is the strongest EPE predictor (OR = 5.54 for ratio 0\u21921). This reflects high tumor volume.</li>';
+  } else if (coreRatio >= 0.3) {
+    html += '<li>Moderate core ratio (' + coreRatio.toFixed(2) + '). Core ratio is the strongest predictor (OR = 5.54 for 0\u21921).</li>';
+  } else {
+    html += '<li>Low core ratio (' + coreRatio.toFixed(2) + ') is favorable. Core ratio is the strongest predictor (OR = 5.54 for 0\u21921).</li>';
+  }
+
+  if (pirads === 5) {
+    html += '<li>PI-RADS 5 is a strong EPE predictor (OR = 3.59, p = 0.001).</li>';
+  } else if (pirads === 4) {
+    html += '<li>PI-RADS 4 shows a non-significant trend toward EPE (OR = 1.72, p = 0.17).</li>';
+  } else {
+    html += '<li>PI-RADS \u22643 is the reference category (lower imaging suspicion).</li>';
+  }
+
+  if (isup >= 3) {
+    html += '<li>ISUP GG3+ is strongly associated with EPE (OR = 2.66, p < 0.001).</li>';
+  } else if (isup === 2) {
+    html += '<li>ISUP GG2 is not significantly different from GG1 for EPE risk (OR = 1.42, p = 0.15).</li>';
+  } else {
+    html += '<li>ISUP GG1 is the reference category (lowest EPE risk).</li>';
+  }
+
+  if (mriAny) {
+    html += '<li>MRI lesion presence per se does not add to prediction (OR = 0.92, p = 0.75) once PI-RADS is accounted for.</li>';
+  }
+
+  html += '</ul>';
+  html += '</div>';
+
+  // Clinical implications
+  html += '<div class="interp-card">';
+  html += '<h4>Clinical context</h4>';
+  html += '<ul>';
+  html += '<li>EPE is defined as tumor growth beyond the prostatic capsule and corresponds to pT3a (without SVI) or higher staging.</li>';
+  html += '<li>The model provides <strong>moderate</strong> discrimination (corrected AUC 0.714), comparable to the Partin tables (AUC 0.65\u20130.75).</li>';
+  html += '<li>The three statistically significant predictors are core ratio, PI-RADS 5, and ISUP GG3+. Age, PSA, ISUP GG2, PI-RADS 4, and MRI lesion presence were not statistically significant.</li>';
+  html += '<li>Unfavorable histology (LVI, angioinvasion, neuroinvasion) was strongly associated with EPE but these are postoperative findings not available preoperatively.</li>';
+  html += '<li>PSM and EPE have different spatial distributions: apex-dominant PSM (69.3%) vs radial/NVB-dominant EPE (51.4%/28.6%).</li>';
+  html += '</ul>';
+  html += '</div>';
+
+  document.getElementById('interpContent').innerHTML = html;
+}
+
+function toggleInfo() {
+  const btn = document.getElementById('infoToggle');
+  const content = document.getElementById('infoContent');
+  btn.classList.toggle('open');
+  content.classList.toggle('visible');
+}
+
+function resetForm() {
+  document.getElementById('age').value = '';
+  document.getElementById('psa').value = '';
+  document.getElementById('core_ratio').value = '';
+  document.getElementById('pos_cores').value = '';
+  document.getElementById('total_cores').value = '';
+  document.getElementById('ratioDisplay').textContent = '= \u2014';
+  document.getElementById('mri_any').checked = false;
+  document.querySelectorAll('input[name="isup"]').forEach(r => r.checked = false);
+  document.querySelectorAll('input[name="pirads"]').forEach(r => r.checked = false);
+  document.getElementById('resultsPanel').classList.remove('visible');
+  document.getElementById('gaugeFill').style.strokeDashoffset = '251.33';
+  document.getElementById('gaugeValue').textContent = '\u2014';
+  document.getElementById('riskLabel').style.display = 'none';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') calculate();
+});
+</script>
+
+</body>
+</html>
