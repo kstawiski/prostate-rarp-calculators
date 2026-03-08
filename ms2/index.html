@@ -5,34 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EPE Risk Calculator</title>
 <meta name="description" content="Predicts probability of extraprostatic extension (EPE) after radical prostatectomy. Based on LASSO logistic regression with bootstrap-corrected internal validation (n=492).">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary: #1a365d;
-    --primary-light: #2a4a7f;
-    --primary-lighter: #3b6cb5;
-    --accent: #2b6cb0;
-    --accent-light: #4299e1;
-    --bg: #f0f4f8;
+    --primary: #05889b;
+    --primary-dark: #005260;
+    --primary-light: rgba(5, 136, 155, 0.08);
+    --accent: #05889b;
+    --accent-light: rgba(5, 136, 155, 0.15);
+    --bg: #f8f9fa;
     --card-bg: #ffffff;
-    --text: #1a202c;
-    --text-secondary: #4a5568;
-    --text-muted: #718096;
-    --border: #e2e8f0;
-    --border-focus: #4299e1;
+    --text: #111111;
+    --text-secondary: #333333;
+    --text-muted: #b1b4b8;
+    --border: #d1d5db;
+    --border-focus: #05889b;
     --low-risk: #38a169;
     --moderate-risk: #d69e2e;
     --high-risk: #e53e3e;
-    --gauge-track: #e2e8f0;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --gauge-track: #d1d5db;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1);
     --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
-    --radius: 10px;
+    --radius: 8px;
     --radius-sm: 6px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
@@ -40,7 +41,7 @@
   }
 
   .header {
-    background: linear-gradient(135deg, #1a365d 0%, #2d3748 50%, #553c9a 100%);
+    background: linear-gradient(135deg, #05889b 0%, #005260 100%);
     color: white;
     padding: 2rem 1.5rem;
     text-align: center;
@@ -91,6 +92,7 @@
 
   .card {
     background: var(--card-bg);
+    border: 1px solid #e5e7eb;
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     padding: 1.5rem;
@@ -113,7 +115,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #553c9a;
+    background: #05889b;
     color: white;
     border-radius: 4px;
     font-size: 0.7rem;
@@ -158,7 +160,7 @@
   .form-input:focus {
     outline: none;
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(66,153,225,0.15);
+    box-shadow: 0 0 0 3px rgba(5, 136, 155, 0.15);
     background: white;
   }
   .form-input::-webkit-inner-spin-button { opacity: 1; }
@@ -187,14 +189,14 @@
     color: var(--text-secondary);
   }
   .radio-btn input:checked + label {
-    border-color: #553c9a;
-    background: rgba(85,60,154,0.08);
-    color: #553c9a;
+    border-color: #05889b;
+    background: rgba(5, 136, 155, 0.08);
+    color: #05889b;
     font-weight: 600;
   }
   .radio-btn label:hover {
-    border-color: #805ad5;
-    background: rgba(85,60,154,0.04);
+    border-color: #05889b;
+    background: rgba(5, 136, 155, 0.04);
   }
 
   .checkbox-item {
@@ -207,7 +209,7 @@
   .checkbox-item input[type="checkbox"] {
     width: 18px;
     height: 18px;
-    accent-color: #553c9a;
+    accent-color: #05889b;
     cursor: pointer;
   }
   .checkbox-item span {
@@ -243,10 +245,10 @@
     display: block;
     width: 100%;
     padding: 0.9rem;
-    background: linear-gradient(135deg, #553c9a 0%, #2d3748 100%);
+    background-color: #05889b;
     color: white;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
@@ -255,6 +257,7 @@
     letter-spacing: 0.01em;
   }
   .calc-btn:hover {
+    background-color: #005260;
     box-shadow: var(--shadow-md);
     transform: translateY(-1px);
   }
@@ -370,7 +373,7 @@
   }
 
   .interp-card {
-    background: #f7fafc;
+    background: #f8f9fa;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 1rem 1.2rem;
@@ -395,7 +398,7 @@
   .highlight-stat {
     display: inline-block;
     font-weight: 700;
-    color: #553c9a;
+    color: #05889b;
   }
 
   .context-table {
@@ -407,7 +410,7 @@
   .context-table th {
     text-align: left;
     padding: 0.5rem 0.6rem;
-    background: #edf2f7;
+    background: #f3f4f6;
     font-weight: 600;
     color: var(--text-secondary);
     border-bottom: 1px solid var(--border);
@@ -415,7 +418,7 @@
   }
   .context-table td {
     padding: 0.45rem 0.6rem;
-    border-bottom: 1px solid #f0f4f8;
+    border-bottom: 1px solid #f0f1f3;
     color: var(--text-secondary);
   }
   .context-table tr:last-child td { border-bottom: none; }
@@ -427,7 +430,7 @@
     gap: 0.4rem;
     background: none;
     border: none;
-    color: #553c9a;
+    color: #05889b;
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
@@ -464,7 +467,7 @@
     color: var(--text-muted);
     line-height: 1.6;
   }
-  .footer a { color: #553c9a; text-decoration: none; }
+  .footer a { color: #05889b; text-decoration: none; }
 
   .reset-btn {
     display: inline-flex;

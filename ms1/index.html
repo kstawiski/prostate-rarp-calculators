@@ -5,29 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DaVinci vs Versius &mdash; RARP Outcome Comparison</title>
 <meta name="description" content="Interactive results summary of single-surgeon DaVinci vs Versius RARP comparison using overlap weighting with falsification testing (n=602).">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary: #1a365d;
-    --dv-color: #2b6cb0;
-    --vs-color: #d53f8c;
-    --bg: #f0f4f8;
+    --primary: #05889b;
+    --primary-dark: #005260;
+    --primary-light: rgba(5, 136, 155, 0.08);
+    --dv-color: #05889b;
+    --vs-color: #005260;
+    --bg: #f8f9fa;
     --card-bg: #ffffff;
-    --text: #1a202c;
-    --text-secondary: #4a5568;
-    --text-muted: #718096;
-    --border: #e2e8f0;
+    --text: #111111;
+    --text-secondary: #333333;
+    --text-muted: #b1b4b8;
+    --border: #d1d5db;
     --success: #38a169;
     --warning: #d69e2e;
     --danger: #e53e3e;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
-    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    --radius: 8px;
     --radius-sm: 6px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
@@ -35,7 +38,7 @@
   }
 
   .header {
-    background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 40%, #d53f8c 100%);
+    background: linear-gradient(135deg, #05889b 0%, #005260 100%);
     color: white;
     padding: 2rem 1.5rem;
     text-align: center;
@@ -85,6 +88,7 @@
 
   .card {
     background: var(--card-bg);
+    border: 1px solid #e5e7eb;
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     padding: 1.5rem;
@@ -150,7 +154,7 @@
     text-align: center;
     padding: 0.8rem 0.5rem;
     border-radius: var(--radius-sm);
-    background: #f7fafc;
+    background: #f8f9fa;
     border: 1px solid var(--border);
   }
   .key-num .value {
@@ -179,7 +183,7 @@
   .outcome-table th {
     text-align: left;
     padding: 0.55rem 0.6rem;
-    background: #edf2f7;
+    background: #f3f4f6;
     font-weight: 600;
     color: var(--text-secondary);
     border-bottom: 1.5px solid var(--border);
@@ -187,12 +191,12 @@
   }
   .outcome-table td {
     padding: 0.5rem 0.6rem;
-    border-bottom: 1px solid #f0f4f8;
+    border-bottom: 1px solid #f0f1f3;
     color: var(--text-secondary);
   }
   .outcome-table tr:last-child td { border-bottom: none; }
   .outcome-table .primary-row {
-    background: rgba(43,108,176,0.04);
+    background: rgba(5, 136, 155, 0.04);
     font-weight: 600;
   }
   .sig { color: var(--danger); font-weight: 700; }
@@ -207,7 +211,7 @@
     padding: 0.5rem 0.6rem;
     border-radius: var(--radius-sm);
   }
-  .forest-row:nth-child(odd) { background: #f7fafc; }
+  .forest-row:nth-child(odd) { background: #f8f9fa; }
   .forest-label {
     font-size: 0.82rem;
     font-weight: 500;
@@ -298,7 +302,7 @@
   }
 
   .interp-card {
-    background: #f7fafc;
+    background: #f8f9fa;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 1rem 1.2rem;
