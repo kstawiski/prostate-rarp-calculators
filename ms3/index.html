@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ISUP Upgrading Risk Calculator</title>
-<meta name="description" content="Predicts probability of ISUP grade group upgrading after radical prostatectomy. Based on LASSO-penalized logistic regression with internal-external cross-validation (n=599).">
+<meta name="description" content="Predicts probability of ISUP grade group upgrading after radical prostatectomy in RP-selected patients. Based on LASSO-penalized logistic regression with year-stratified cross-validation (n=599). Not for active-surveillance selection.">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -583,7 +583,7 @@
 <div class="header">
   <h1>ISUP Upgrading Risk Calculator</h1>
   <div class="subtitle">Prediction of ISUP Grade Group Upgrading After Radical Prostatectomy</div>
-  <div class="badge">n = 599 &middot; LASSO Logistic Regression &middot; IECV Validated</div>
+  <div class="badge">n = 599 &middot; LASSO Logistic Regression &middot; Year-Stratified &amp; Rolling-Origin Validated</div>
 </div>
 
 <div class="container">
@@ -812,7 +812,7 @@
         <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">
           Corrected C-statistic: <strong>0.812</strong> (optimism 0.004) &middot;
           Calibration slope: 0.982 &middot; Brier: 0.175<br>
-          IECV AUC: 0.797 (I&sup2; = 0%, 5 annual folds) &middot; EPV: 69.8
+          Year-stratified AUC: 0.797 (I&sup2; = 0%) &middot; Rolling-origin AUC: 0.800 &middot; EPV: 69.8
         </p>
 
         <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Model B (Clinic + MRI)</h4>
@@ -836,13 +836,13 @@
         <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">
           Corrected C-statistic: <strong>0.816</strong> (optimism 0.009) &middot;
           Calibration slope: 0.943 &middot; Brier: 0.169<br>
-          IECV AUC: 0.807 (I&sup2; = 0%, 5 annual folds)<br>
-          MRI added &Delta;C = +0.004 after optimism correction (negligible)
+          Year-stratified AUC: 0.807 (I&sup2; = 0%) &middot; Rolling-origin AUC: 0.810<br>
+          MRI added &Delta;C = +0.004 after optimism correction (marginal; 95% CI &minus;0.002 to 0.013)
         </p>
 
         <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Validation Summary</h4>
         <p style="font-size:0.82rem;color:var(--text-secondary)">
-          Both models were developed using LASSO-penalized logistic regression with stability selection across m = 40 multiply imputed datasets. Validation included bootstrap optimism correction (B = 1000) and leave-one-year-out internal-external cross-validation (IECV) across five annual strata (2021&ndash;2025). An XGBoost benchmark achieved corrected C = 0.854 but with substantially greater optimism (0.072), suggesting the logistic model captures nearly all available signal.
+          Both models were developed using LASSO-penalized logistic regression with variable selection frequency across m = 40 multiply imputed datasets. Validation included bootstrap optimism correction (B = 1000) and year-stratified leave-one-year-out cross-validation across five annual strata (2021&ndash;2025). A forward-only rolling-origin analysis confirmed consistent discrimination (size-weighted AUC 0.800). An XGBoost benchmark achieved corrected C = 0.854 but with substantially greater optimism (0.072) and poor calibration (slope 29.2).
         </p>
       </div>
     </div>
@@ -851,13 +851,13 @@
   <!-- Disclaimer -->
   <div class="disclaimer">
     <strong>Research tool &mdash; not for clinical decision-making.</strong>
-    This calculator implements models from a single-surgeon, two-center study (n = 599). It has undergone internal-external cross-validation but not external validation in independent cohorts. Predictions should not replace clinical judgment. The model predicts <em>any</em> upgrading; clinically significant upgrading (GG1/GG2 to GG3+) is substantially harder to predict (corrected C = 0.653).
+    This calculator implements models from a single-surgeon, two-center study (n = 599) developed in patients <strong>already selected for radical prostatectomy</strong>. It has undergone year-stratified cross-validation and forward rolling-origin validation but not external validation in independent cohorts. Predictions should not replace clinical judgment. The model predicts <em>any</em> upgrading; clinically significant upgrading (GG1/GG2 to GG3+) is substantially harder to predict (corrected C = 0.653). <strong>This tool should not be used for active-surveillance eligibility decisions.</strong>
   </div>
 
   <div class="footer">
-    Jobczyk M, Clinton TN, De Carvalho FL, Stawiski K.<br>
-    <em>Prediction of ISUP Grade Group Upgrading After Radical Prostatectomy:</em><br>
-    <em>Development and Internal-External Cross-Validation.</em><br>
+    Jobczyk M, Clinton TN, Ciechanowski P, De Carvalho FL, Stawiski K.<br>
+    <em>A Simple Preoperative Model for Predicting ISUP Grade Group Upgrading</em><br>
+    <em>After Radical Prostatectomy: Development and Year-Stratified Validation.</em><br>
     Prostate Cancer and Prostatic Diseases (submitted 2026).
   </div>
 
