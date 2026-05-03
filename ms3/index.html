@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ISUP Upgrading Risk Calculator</title>
-<meta name="description" content="Predicts probability of ISUP grade group upgrading after radical prostatectomy in RP-selected patients. Based on logistic regression with LASSO-selected predictors and multiply-imputed Rubin's-rules pooling (n=599). Corrected C-statistic 0.812. Not for active-surveillance selection.">
+<title>ISUP Upgrading Risk Calculator — Jobczyk 7-Predictor Model (MS3 v0.6)</title>
+<meta name="description" content="Pre-registered, SHA256-locked, externally validated logistic-regression risk calculator for ISUP upgrading at radical prostatectomy. Polish-derived (n=820) and externally validated on a US academic cohort (n=595). Any-upgrade deployable after intercept recalibration; major-upgrade research-only.">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -45,7 +45,6 @@
     min-height: 100vh;
   }
 
-  /* Header */
   .header {
     background: linear-gradient(135deg, #05889b 0%, #005260 100%);
     color: white;
@@ -73,31 +72,35 @@
   }
   .header .subtitle {
     font-size: 0.88rem;
-    opacity: 0.85;
+    opacity: 0.9;
     font-weight: 400;
+    position: relative;
+  }
+  .header .badges {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
     position: relative;
   }
   .header .badge {
     display: inline-block;
-    margin-top: 0.7rem;
     padding: 0.2rem 0.7rem;
     background: rgba(255,255,255,0.15);
     border-radius: 20px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 500;
     letter-spacing: 0.02em;
-    position: relative;
     backdrop-filter: blur(4px);
   }
 
-  /* Layout */
   .container {
     max-width: 960px;
     margin: 0 auto;
     padding: 1.5rem 1rem;
   }
 
-  /* Tabs */
   .tab-bar {
     display: flex;
     gap: 0;
@@ -138,13 +141,12 @@
   }
   .tab-label {
     display: block;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 400;
     color: var(--text-muted);
     margin-top: 0.15rem;
   }
 
-  /* Cards */
   .card {
     background: var(--card-bg);
     border: 1px solid #e5e7eb;
@@ -178,19 +180,13 @@
     flex-shrink: 0;
   }
 
-  /* Form elements */
   .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.1rem;
   }
-  .form-group {
-    display: flex;
-    flex-direction: column;
-  }
-  .form-group.full-width {
-    grid-column: 1 / -1;
-  }
+  .form-group { display: flex; flex-direction: column; }
+  .form-group.full-width { grid-column: 1 / -1; }
   .form-label {
     font-size: 0.82rem;
     font-weight: 600;
@@ -219,18 +215,13 @@
     box-shadow: 0 0 0 3px rgba(5, 136, 155, 0.15);
     background: white;
   }
-  .form-input::-webkit-inner-spin-button { opacity: 1; }
 
-  /* Select / radio buttons */
   .radio-group {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
   }
-  .radio-btn {
-    flex: 1;
-    min-width: 0;
-  }
+  .radio-btn { flex: 1; min-width: 0; }
   .radio-btn input { display: none; }
   .radio-btn label {
     display: block;
@@ -256,40 +247,25 @@
     background: rgba(5, 136, 155, 0.04);
   }
 
-  /* MRI section */
-  .mri-section {
-    display: none;
-    margin-top: 1.2rem;
-    padding-top: 1.2rem;
-    border-top: 1px dashed var(--border);
-  }
-  .mri-section.visible { display: block; }
-  .mri-section .card-title { margin-bottom: 1rem; }
-
-  .checkbox-group {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-  .checkbox-item {
+  .toggle-row {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.6rem;
+    padding: 0.6rem 0.85rem;
+    background: #fafbfc;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    color: var(--text-secondary);
     cursor: pointer;
   }
-  .checkbox-item input[type="checkbox"] {
+  .toggle-row input[type="checkbox"] {
     width: 18px;
     height: 18px;
     accent-color: var(--accent);
     cursor: pointer;
   }
-  .checkbox-item span {
-    font-size: 0.88rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
 
-  /* Calculate button */
   .calc-btn {
     display: block;
     width: 100%;
@@ -312,28 +288,18 @@
   }
   .calc-btn:active { transform: translateY(0); }
 
-  /* Results */
-  .results-panel {
-    display: none;
-  }
-  .results-panel.visible { display: block; }
+  .results-panel { display: none; }
+  .results-panel.visible { display: block; animation: fadeIn 0.35s ease-out; }
 
-  .result-main {
-    text-align: center;
-    padding: 1.5rem;
-  }
+  .result-main { text-align: center; padding: 1.5rem 0 1rem; }
 
-  /* Gauge */
   .gauge-container {
     position: relative;
-    width: 200px;
-    height: 120px;
-    margin: 0 auto 1rem;
+    width: 220px;
+    height: 130px;
+    margin: 0 auto 0.5rem;
   }
-  .gauge-svg {
-    width: 200px;
-    height: 120px;
-  }
+  .gauge-svg { width: 220px; height: 130px; }
   .gauge-track {
     fill: none;
     stroke: var(--gauge-track);
@@ -368,32 +334,26 @@
     border-radius: 20px;
     font-size: 0.82rem;
     font-weight: 600;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
   }
   .risk-low { background: #f0fff4; color: #276749; }
   .risk-moderate { background: #fffff0; color: #975a16; }
   .risk-high { background: #fff5f5; color: #c53030; }
 
-  /* Comparison bar */
-  .comparison-section {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-  }
-  .comparison-row {
+  .variant-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 0.7rem;
+    margin-bottom: 0.65rem;
   }
-  .comparison-label {
+  .variant-label {
     font-size: 0.78rem;
     font-weight: 600;
     color: var(--text-secondary);
-    min-width: 70px;
+    min-width: 130px;
     text-align: right;
   }
-  .comparison-bar-track {
+  .variant-bar-track {
     flex: 1;
     height: 22px;
     background: var(--gauge-track);
@@ -401,7 +361,7 @@
     overflow: hidden;
     position: relative;
   }
-  .comparison-bar-fill {
+  .variant-bar-fill {
     height: 100%;
     border-radius: 11px;
     transition: width 0.8s ease-out;
@@ -411,15 +371,15 @@
     padding-right: 8px;
     min-width: 40px;
   }
-  .comparison-bar-fill span {
+  .variant-bar-fill span {
     font-size: 0.72rem;
     font-weight: 700;
     color: white;
   }
-  .bar-a { background: #05889b; }
-  .bar-b { background: #005260; }
+  .bar-frozen { background: #05889b; }
+  .bar-shrunk { background: #4fb3c2; }
+  .bar-recal { background: #005260; }
 
-  /* Interpretation */
   .interp-card {
     background: #f8f9fa;
     border: 1px solid var(--border);
@@ -438,10 +398,7 @@
     color: var(--text-secondary);
     line-height: 1.55;
   }
-  .interp-card ul {
-    padding-left: 1.2rem;
-    margin-top: 0.4rem;
-  }
+  .interp-card ul { padding-left: 1.2rem; margin-top: 0.4rem; }
   .interp-card li { margin-bottom: 0.25rem; }
 
   .highlight-stat {
@@ -450,7 +407,6 @@
     color: var(--accent);
   }
 
-  /* Context table */
   .context-table {
     width: 100%;
     border-collapse: collapse;
@@ -477,10 +433,7 @@
     font-weight: 600;
   }
 
-  /* Info / footer */
-  .info-section {
-    margin-top: 0.5rem;
-  }
+  .info-section { margin-top: 0.5rem; }
   .info-toggle {
     display: flex;
     align-items: center;
@@ -499,16 +452,20 @@
     font-size: 0.7rem;
   }
   .info-toggle.open .arrow { transform: rotate(90deg); }
-  .info-content {
-    display: none;
-    padding: 0.75rem 0;
-  }
+  .info-content { display: none; padding: 0.75rem 0; }
   .info-content.visible { display: block; }
   .info-content p {
-    font-size: 0.8rem;
-    color: var(--text-muted);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
     line-height: 1.55;
     margin-bottom: 0.5rem;
+  }
+  .info-content code {
+    background: #f3f4f6;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-size: 0.78rem;
+    word-break: break-all;
   }
 
   .disclaimer {
@@ -523,6 +480,20 @@
   }
   .disclaimer strong { color: #c05621; }
 
+  .non-deploy-banner {
+    display: none;
+    background: #fff5f5;
+    border: 1.5px solid #fc8181;
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.84rem;
+    color: #9b2c2c;
+    line-height: 1.55;
+  }
+  .non-deploy-banner.visible { display: block; }
+  .non-deploy-banner strong { color: #742a2a; }
+
   .footer {
     text-align: center;
     padding: 1.5rem 1rem;
@@ -530,25 +501,21 @@
     color: var(--text-muted);
     line-height: 1.6;
   }
-  .footer a {
-    color: var(--accent);
-    text-decoration: none;
-  }
+  .footer a { color: var(--accent); text-decoration: none; }
 
-  /* Responsive */
   @media (max-width: 640px) {
     .header { padding: 1.5rem 1rem; }
-    .header h1 { font-size: 1.3rem; }
+    .header h1 { font-size: 1.25rem; }
     .form-grid { grid-template-columns: 1fr; }
     .container { padding: 1rem 0.75rem; }
     .card { padding: 1.2rem; }
     .radio-group { gap: 0.35rem; }
-    .radio-btn label { padding: 0.5rem 0.3rem; font-size: 0.8rem; }
+    .radio-btn label { padding: 0.5rem 0.3rem; font-size: 0.78rem; }
     .tab-btn { padding: 0.7rem 0.5rem; font-size: 0.82rem; }
-    .tab-label { font-size: 0.66rem; }
+    .tab-label { font-size: 0.65rem; }
+    .variant-label { min-width: 90px; font-size: 0.72rem; }
   }
 
-  /* Reset button */
   .reset-btn {
     display: inline-flex;
     align-items: center;
@@ -565,56 +532,77 @@
     transition: all 0.2s;
     margin-top: 0.75rem;
   }
-  .reset-btn:hover {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
+  .reset-btn:hover { border-color: var(--danger); color: var(--danger); }
 
-  /* Animations */
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  .results-panel.visible { animation: fadeIn 0.35s ease-out; }
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>ISUP Upgrading Risk Calculator</h1>
-  <div class="subtitle">Prediction of ISUP Grade Group Upgrading After Radical Prostatectomy</div>
-  <div class="badge">n = 599 &middot; LASSO Logistic Regression &middot; Year-Stratified &amp; Rolling-Origin Validated</div>
+  <div class="subtitle">Pre-registered, externally validated logistic-regression model &middot; Polish derivation (n = 820) &rarr; US validation (n = 595)</div>
+  <div class="badges">
+    <span class="badge">TRIPOD+AI 2024</span>
+    <span class="badge">SHA256-locked frozen JSON</span>
+    <span class="badge">Rubin-pooled (m = 20)</span>
+    <span class="badge">Bootstrap optimism (B = 500/imp)</span>
+  </div>
 </div>
 
 <div class="container">
 
-  <!-- Model tabs -->
+  <!-- Endpoint tabs -->
   <div class="tab-bar">
-    <button class="tab-btn active" onclick="switchModel('A')" id="tabA">
-      Model A
-      <span class="tab-label">Clinic-only (C = 0.812)</span>
+    <button class="tab-btn active" onclick="switchEndpoint('any')" id="tabAny">
+      Any-upgrade
+      <span class="tab-label">RP ISUP &gt; biopsy ISUP &middot; deployable</span>
     </button>
-    <button class="tab-btn" onclick="switchModel('B')" id="tabB">
-      Model B
-      <span class="tab-label">Clinic + MRI (C = 0.816)</span>
+    <button class="tab-btn" onclick="switchEndpoint('major')" id="tabMajor">
+      Major-upgrade
+      <span class="tab-label">GG1-2 &rarr; GG&ge;3 &middot; research-only</span>
     </button>
+  </div>
+
+  <!-- Model-variant selector (any-upgrade only) -->
+  <div class="card" id="variantCard" style="margin-top:-0.25rem;padding:1rem 1.5rem">
+    <div class="card-title" style="margin-bottom:0.6rem"><span class="icon">M</span> Model specification</div>
+    <div class="radio-group">
+      <div class="radio-btn">
+        <input type="radio" name="modelvariant" id="varFull" value="full" checked>
+        <label for="varFull">Full 7-predictor<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">primary frozen model</span></label>
+      </div>
+      <div class="radio-btn">
+        <input type="radio" name="modelvariant" id="varDrop" value="dropCT">
+        <label for="varDrop">Drop-cT 6-predictor<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">recommended when cT non-comparable</span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Major-upgrade non-deployment banner -->
+  <div class="non-deploy-banner" id="majorBanner">
+    <strong>Research use only.</strong> The major-upgrade specification is restricted to biopsy GG1-2 patients. External validation on the US cohort returned area under the curve 0.632 (95% CI 0.553-0.709) — below the pre-specified transportability threshold. Discrimination is essentially equivalent to biopsy ISUP plus log-PSA alone. Do not use for active-surveillance eligibility.
   </div>
 
   <!-- Input card -->
   <div class="card">
-    <div class="card-title"><span class="icon">1</span> Clinical parameters</div>
+    <div class="card-title"><span class="icon">1</span> Patient inputs</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label" for="age">Age <span class="unit">(years)</span></label>
         <input type="number" class="form-input" id="age" min="30" max="90" step="1" placeholder="e.g. 65">
       </div>
       <div class="form-group">
-        <label class="form-label" for="psa">PSA <span class="unit">(ng/mL)</span></label>
-        <input type="number" class="form-input" id="psa" min="0" max="200" step="0.1" placeholder="e.g. 7.3">
+        <label class="form-label" for="psa">Pre-operative PSA <span class="unit">(ng/mL)</span></label>
+        <input type="number" class="form-input" id="psa" min="0" max="200" step="0.1" placeholder="e.g. 7.4">
       </div>
-      <div class="form-group full-width">
-        <label class="form-label">Biopsy ISUP Grade Group</label>
-        <div class="radio-group">
+
+      <div class="form-group full-width" id="isupGroup">
+        <label class="form-label">Biopsy ISUP grade group</label>
+        <div class="radio-group" id="isupRadios">
           <div class="radio-btn">
             <input type="radio" name="isup" id="gg1" value="1">
             <label for="gg1">GG1<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">3+3</span></label>
@@ -623,67 +611,76 @@
             <input type="radio" name="isup" id="gg2" value="2">
             <label for="gg2">GG2<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">3+4</span></label>
           </div>
-          <div class="radio-btn">
+          <div class="radio-btn" data-isup="3">
             <input type="radio" name="isup" id="gg3" value="3">
             <label for="gg3">GG3<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+3</span></label>
           </div>
-          <div class="radio-btn">
+          <div class="radio-btn" data-isup="4">
             <input type="radio" name="isup" id="gg4" value="4">
             <label for="gg4">GG4<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+4</span></label>
           </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="cores_pos">Positive biopsy cores</label>
+        <input type="number" class="form-input" id="cores_pos" min="0" max="40" step="1" placeholder="e.g. 4">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="cores_total">Total biopsy cores</label>
+        <input type="number" class="form-input" id="cores_total" min="1" max="60" step="1" placeholder="e.g. 12">
+      </div>
+
+      <div class="form-group full-width">
+        <label class="form-label">Clinical T stage</label>
+        <div class="radio-group">
           <div class="radio-btn">
-            <input type="radio" name="isup" id="gg5" value="5">
-            <label for="gg5">GG5<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">4+5/5+5</span></label>
+            <input type="radio" name="ct" id="cT1" value="T1">
+            <label for="cT1">cT1</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="ct" id="cT2" value="T2">
+            <label for="cT2">cT2</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="ct" id="cT3" value="T3+">
+            <label for="cT3">cT3+</label>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- MRI section (Model B only) -->
-    <div class="mri-section" id="mriSection">
-      <div class="card-title"><span class="icon">2</span> MRI parameters</div>
-      <div class="form-grid">
-        <div class="form-group full-width">
-          <label class="form-label">PI-RADS Score</label>
-          <div class="radio-group">
-            <div class="radio-btn">
-              <input type="radio" name="pirads" id="pirads3" value="3">
-              <label for="pirads3">&le; 3</label>
-            </div>
-            <div class="radio-btn">
-              <input type="radio" name="pirads" id="pirads4" value="4">
-              <label for="pirads4">4</label>
-            </div>
-            <div class="radio-btn">
-              <input type="radio" name="pirads" id="pirads5" value="5">
-              <label for="pirads5">5</label>
-            </div>
+      <div class="form-group full-width">
+        <label class="form-label">PI-RADS (highest lesion)</label>
+        <div class="radio-group">
+          <div class="radio-btn">
+            <input type="radio" name="pirads" id="pir12" value="1-2">
+            <label for="pir12">1-2</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="pirads" id="pir3" value="3">
+            <label for="pir3">3</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="pirads" id="pir4" value="4">
+            <label for="pir4">4</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" name="pirads" id="pir5" value="5">
+            <label for="pir5">5</label>
           </div>
         </div>
-        <div class="form-group full-width">
-          <label class="form-label">MRI Lesion Location(s)</label>
-          <div class="checkbox-group">
-            <label class="checkbox-item">
-              <input type="checkbox" id="mri_apex">
-              <span>Apex</span>
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="mri_midgland">
-              <span>Midgland</span>
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="mri_base">
-              <span>Base</span>
-              <span style="font-size:0.7rem;color:var(--text-muted)">(not in model)</span>
-            </label>
-          </div>
-        </div>
+      </div>
+
+      <div class="form-group full-width">
+        <label class="toggle-row" for="fusion_biopsy">
+          <input type="checkbox" id="fusion_biopsy">
+          <span><strong>MRI-fusion biopsy performed</strong> &middot; uncheck for systematic biopsy only</span>
+        </label>
       </div>
     </div>
   </div>
 
-  <!-- Calculate -->
-  <button class="calc-btn" onclick="calculate()">Calculate Upgrading Risk</button>
+  <button class="calc-btn" onclick="calculate()">Calculate upgrading probability</button>
   <div style="text-align:center">
     <button class="reset-btn" onclick="resetForm()">&#8634; Reset</button>
   </div>
@@ -695,95 +692,63 @@
       <div class="card-title"><span class="icon">R</span> Predicted upgrading probability</div>
       <div class="result-main">
         <div class="gauge-container">
-          <svg class="gauge-svg" viewBox="0 0 200 120">
-            <path class="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" />
-            <path class="gauge-fill" id="gaugeFill" d="M 20 100 A 80 80 0 0 1 180 100"
-              stroke-dasharray="251.33" stroke-dashoffset="251.33" />
-            <text x="100" y="92" class="gauge-value" id="gaugeValue">—</text>
-            <text x="100" y="110" class="gauge-label-text">probability</text>
+          <svg class="gauge-svg" viewBox="0 0 220 130">
+            <path class="gauge-track" d="M 25 110 A 85 85 0 0 1 195 110" />
+            <path class="gauge-fill" id="gaugeFill" d="M 25 110 A 85 85 0 0 1 195 110"
+              stroke-dasharray="267.04" stroke-dashoffset="267.04" />
+            <text x="110" y="100" class="gauge-value" id="gaugeValue">—</text>
+            <text x="110" y="118" class="gauge-label-text" id="gaugeLabel">probability</text>
           </svg>
         </div>
         <div id="riskLabel" class="risk-label risk-moderate" style="display:none">—</div>
       </div>
 
-      <!-- A vs B comparison -->
-      <div class="comparison-section" id="comparisonSection">
-        <div style="font-size:0.78rem;font-weight:600;color:var(--text-muted);margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.05em">Model comparison</div>
-        <div class="comparison-row">
-          <span class="comparison-label">Model A</span>
-          <div class="comparison-bar-track">
-            <div class="comparison-bar-fill bar-a" id="barA" style="width:0%"><span id="barAVal"></span></div>
+      <div style="margin-top:0.6rem">
+        <div style="font-size:0.78rem;font-weight:600;color:var(--text-muted);margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.05em">Variant comparison</div>
+        <div class="variant-row">
+          <span class="variant-label">Frozen (as published)</span>
+          <div class="variant-bar-track">
+            <div class="variant-bar-fill bar-frozen" id="barFrozen" style="width:0%"><span id="barFrozenVal"></span></div>
           </div>
         </div>
-        <div class="comparison-row">
-          <span class="comparison-label">Model B</span>
-          <div class="comparison-bar-track">
-            <div class="comparison-bar-fill bar-b" id="barB" style="width:0%"><span id="barBVal"></span></div>
+        <div class="variant-row">
+          <span class="variant-label">Shrinkage 0.944</span>
+          <div class="variant-bar-track">
+            <div class="variant-bar-fill bar-shrunk" id="barShrunk" style="width:0%"><span id="barShrunkVal"></span></div>
           </div>
         </div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem" id="deltaNote"></div>
+        <div class="variant-row" id="recalRow">
+          <span class="variant-label">US-recalibrated</span>
+          <div class="variant-bar-track">
+            <div class="variant-bar-fill bar-recal" id="barRecal" style="width:0%"><span id="barRecalVal"></span></div>
+          </div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.4rem" id="variantNote"></div>
       </div>
     </div>
 
     <!-- Interpretation -->
-    <div class="card" id="interpCard">
+    <div class="card">
       <div class="card-title"><span class="icon">i</span> Interpretation</div>
       <div id="interpContent"></div>
     </div>
 
     <!-- Cohort context -->
     <div class="card">
-      <div class="card-title"><span class="icon">C</span> Cohort context</div>
+      <div class="card-title"><span class="icon">C</span> Cohort upgrading rates</div>
       <div class="interp-card" style="background:white;border:none;padding:0">
-        <p style="margin-bottom:0.5rem">Observed upgrading rates in the development cohort (n = 599):</p>
+        <p style="margin-bottom:0.5rem" id="contextHeader"></p>
         <table class="context-table">
           <thead>
             <tr>
-              <th>Biopsy Grade Group</th>
-              <th>n</th>
-              <th>Upgraded</th>
-              <th>Rate</th>
-              <th>Key transitions</th>
+              <th>Biopsy ISUP</th>
+              <th>Polish (development)</th>
+              <th>US (validation)</th>
             </tr>
           </thead>
-          <tbody id="contextTableBody">
-            <tr id="ctxGG1">
-              <td>GG1 (3+3)</td>
-              <td>250</td>
-              <td>194</td>
-              <td><strong>77.6%</strong></td>
-              <td style="font-size:0.78rem">63.2% &rarr; GG2, 14.4% &rarr; GG3+</td>
-            </tr>
-            <tr id="ctxGG2">
-              <td>GG2 (3+4)</td>
-              <td>207</td>
-              <td>67</td>
-              <td><strong>32.4%</strong></td>
-              <td style="font-size:0.78rem">26.1% &rarr; GG3, 6.3% &rarr; GG4/5</td>
-            </tr>
-            <tr id="ctxGG3">
-              <td>GG3 (4+3)</td>
-              <td>83</td>
-              <td>11</td>
-              <td><strong>13.3%</strong></td>
-              <td style="font-size:0.78rem">8.4% &rarr; GG4, 4.8% &rarr; GG5</td>
-            </tr>
-            <tr id="ctxGG4">
-              <td>GG4 (4+4)</td>
-              <td>51</td>
-              <td>7</td>
-              <td><strong>13.7%</strong></td>
-              <td style="font-size:0.78rem">13.7% &rarr; GG5 (64.7% downgraded)</td>
-            </tr>
-            <tr id="ctxGG5">
-              <td>GG5 (4+5/5+5)</td>
-              <td>8</td>
-              <td>0</td>
-              <td><strong>0.0%</strong></td>
-              <td style="font-size:0.78rem">Cannot upgrade further</td>
-            </tr>
-          </tbody>
+          <tbody id="contextTableBody"></tbody>
         </table>
+        <p style="font-size:0.74rem;color:var(--text-muted);margin-top:0.5rem">Counts from Table 1. Per-stratum AUCs on US validation: ISUP 1 0.684 (0.493-0.836); ISUP 2 0.597 (0.514-0.676); ISUP 3 0.520 (0.366-0.659); ISUP 4 0.458 (0.279-0.644) — discrimination declines with biopsy grade because the ceiling of remaining upgrade space contracts.</p>
       </div>
     </div>
   </div>
@@ -791,314 +756,394 @@
   <!-- Model details -->
   <div class="info-section">
     <button class="info-toggle" id="infoToggle" onclick="toggleInfo()">
-      <span class="arrow">&#9654;</span> Model details &amp; validation
+      <span class="arrow">&#9654;</span> Model details &amp; external validation
     </button>
     <div class="info-content" id="infoContent">
+
       <div class="card" style="margin-top:0.5rem">
-        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.8rem">Model A (Clinic-Only)</h4>
-        <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.5rem">
-          logit(P) = &minus;0.351 + 0.020 &times; age + 0.036 &times; PSA &minus; 2.040 &times; GG2 &minus; 3.424 &times; GG3+
-        </p>
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.8rem">Frozen artefacts (SHA256)</h4>
+        <p><strong>Any-upgrade (full 7-predictor):</strong> <code>jobczyk_logistic_any_upgrade_v1.json</code><br>
+          <code>ac5bff515edce7b6c62e6c0fbf30638440341b8951304a9bcc654d17ed658bd9</code></p>
+        <p><strong>Any-upgrade (drop-cT 6-predictor):</strong> <code>jobczyk_logistic_any_upgrade_dropCT_v1.json</code><br>
+          <code>a7562a213b4dd2b2e423f8f36461e6837904831fa909f6ce40d1fc9b8e43713c</code></p>
+        <p><strong>Major-upgrade (GG1-2 subset):</strong> <code>jobczyk_logistic_major_upgrade_v1.json</code><br>
+          <code>c6e0748255d2e2c485df44d0399c6fc8f8ff43e34523e64182beb0c023074dde</code></p>
+        <p style="font-size:0.78rem;color:var(--text-muted)">Rubin's-rules pooling across m = 20 MICE imputations &middot; Bootstrap optimism correction with 500 resamples per imputation. Coefficients are reproduced verbatim from the JSON files in this calculator's source.</p>
+
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Any-upgrade model — performance</h4>
         <table class="context-table">
-          <thead><tr><th>Predictor</th><th>Log-OR</th><th>OR</th><th>95% CI</th><th>p</th></tr></thead>
+          <thead><tr><th></th><th>Polish (apparent)</th><th>Polish (opt-corrected)</th><th>US external (frozen)</th></tr></thead>
           <tbody>
-            <tr><td>Intercept</td><td>&minus;0.351</td><td>&mdash;</td><td>&mdash;</td><td>0.733</td></tr>
-            <tr><td>Age (per year)</td><td>0.020</td><td>1.021</td><td>0.990&ndash;1.052</td><td>0.196</td></tr>
-            <tr><td>PSA (per ng/mL)</td><td>0.036</td><td>1.036</td><td>1.012&ndash;1.061</td><td>0.004</td></tr>
-            <tr><td>ISUP GG2 (vs GG1)</td><td>&minus;2.040</td><td>0.130</td><td>0.085&ndash;0.199</td><td>&lt;0.001</td></tr>
-            <tr><td>ISUP GG3+ (vs GG1)</td><td>&minus;3.424</td><td>0.033</td><td>0.017&ndash;0.061</td><td>&lt;0.001</td></tr>
+            <tr><td>AUC</td><td>0.810</td><td>0.798</td><td>0.731 (0.676-0.784)</td></tr>
+            <tr><td>Calibration intercept</td><td>0.000</td><td>0.000</td><td>-0.19 (-0.39 to +0.01)</td></tr>
+            <tr><td>Calibration slope</td><td>1.000</td><td>0.944</td><td>1.08 (0.87-1.32)</td></tr>
+            <tr><td>Brier</td><td>0.173</td><td>0.179</td><td>—</td></tr>
+            <tr><td>IPA</td><td>0.303</td><td>0.280</td><td>—</td></tr>
           </tbody>
         </table>
-        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">
-          Corrected C-statistic: <strong>0.812</strong> (optimism 0.004) &middot;
-          Calibration slope: 0.982 &middot; Brier: 0.175<br>
-          Year-stratified AUC: 0.797 (I&sup2; = 0%) &middot; Rolling-origin AUC: 0.800 &middot; EPV: 69.8
-        </p>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">Pre-specified transportability threshold &Delta;AUC &le; 0.05; observed &Delta;AUC = 0.067 (bootstrap upper bound &le; 0.12). Single-step intercept update brings calibration intercept to zero on the US cohort.</p>
 
-        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Model B (Clinic + MRI)</h4>
-        <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.5rem">
-          logit(P) = &minus;0.314 + 0.019 &times; age + 0.033 &times; PSA &minus; 2.098 &times; GG2 &minus; 3.559 &times; GG3+ + 0.059 &times; PI-RADS4 + 0.484 &times; PI-RADS5 &minus; 0.540 &times; apex &minus; 0.538 &times; midgland
-        </p>
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Any-upgrade drop-cT 6-predictor variant — performance</h4>
         <table class="context-table">
-          <thead><tr><th>Predictor</th><th>Log-OR</th><th>OR</th><th>95% CI</th></tr></thead>
+          <thead><tr><th></th><th>Polish (apparent)</th><th>Polish (opt-corrected)</th><th>US external (frozen)</th></tr></thead>
           <tbody>
-            <tr><td>Intercept</td><td>&minus;0.314</td><td>&mdash;</td><td>&mdash;</td></tr>
-            <tr><td>Age (per year)</td><td>0.019</td><td>1.019</td><td>0.988&ndash;1.052</td></tr>
-            <tr><td>PSA (per ng/mL)</td><td>0.033</td><td>1.034</td><td>1.008&ndash;1.059</td></tr>
-            <tr><td>ISUP GG2 (vs GG1)</td><td>&minus;2.098</td><td>0.123</td><td>0.079&ndash;0.190</td></tr>
-            <tr><td>ISUP GG3+ (vs GG1)</td><td>&minus;3.559</td><td>0.028</td><td>0.015&ndash;0.054</td></tr>
-            <tr><td>PI-RADS 4 (vs &le;3)</td><td>0.059</td><td>1.061</td><td>0.541&ndash;2.079</td></tr>
-            <tr><td>PI-RADS 5 (vs &le;3)</td><td>0.484</td><td>1.622</td><td>0.786&ndash;3.348</td></tr>
-            <tr><td>MRI apex</td><td>&minus;0.540</td><td>0.583</td><td>0.236&ndash;1.443</td></tr>
-            <tr><td>MRI midgland</td><td>&minus;0.538</td><td>0.584</td><td>0.280&ndash;1.219</td></tr>
+            <tr><td>AUC</td><td>0.809</td><td>0.799</td><td>0.732</td></tr>
+            <tr><td>Calibration intercept</td><td>0.000</td><td>0.000</td><td>-0.14</td></tr>
+            <tr><td>Calibration slope</td><td>1.000</td><td>0.953</td><td>1.08</td></tr>
+            <tr><td>Brier</td><td>0.174</td><td>0.179</td><td>—</td></tr>
+            <tr><td>IPA</td><td>0.301</td><td>0.281</td><td>—</td></tr>
           </tbody>
         </table>
-        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">
-          Corrected C-statistic: <strong>0.816</strong> (optimism 0.009) &middot;
-          Calibration slope: 0.943 &middot; Brier: 0.169<br>
-          Year-stratified AUC: 0.807 (I&sup2; = 0%) &middot; Rolling-origin AUC: 0.810<br>
-          MRI added &Delta;C = +0.004 after optimism correction (marginal; 95% CI &minus;0.002 to 0.013)
-        </p>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.6rem">Recommended deployment alternative when cT staging is non-comparable across practice environments. External discrimination is essentially identical to the full 7-predictor model (&Delta;AUC = +0.001) with modestly improved calibration intercept (−0.14 versus −0.19).</p>
 
-        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Validation Summary</h4>
-        <p style="font-size:0.82rem;color:var(--text-secondary)">
-          Both models were developed using LASSO-penalized logistic regression with variable selection frequency across m = 40 multiply imputed datasets. Validation included bootstrap optimism correction (B = 1000) and year-stratified leave-one-year-out cross-validation across five annual strata (2021&ndash;2025). A forward-only rolling-origin analysis confirmed consistent discrimination (size-weighted AUC 0.800). An XGBoost benchmark achieved corrected C = 0.854 but with substantially greater optimism (0.072) and poor calibration (slope 29.2).
-        </p>
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Major-upgrade model (biopsy GG1-2 subset) — performance</h4>
+        <table class="context-table">
+          <thead><tr><th></th><th>Polish (apparent)</th><th>Polish (opt-corrected)</th><th>US external (frozen)</th></tr></thead>
+          <tbody>
+            <tr><td>AUC</td><td>0.672</td><td>0.639</td><td>0.632 (0.553-0.709)</td></tr>
+            <tr><td>Calibration intercept</td><td>0.000</td><td>0.005</td><td>-0.44 (-0.73 to -0.18)</td></tr>
+            <tr><td>Calibration slope</td><td>1.000</td><td>0.803</td><td>1.11 (0.44-1.87)</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.78rem;color:#9b2c2c;margin-top:0.6rem"><strong>Does not transport for clinical deployment.</strong> Discrimination is essentially equivalent to biopsy ISUP plus log-PSA alone. The successor study (MS4) reframes the major-upgrade question from continuous-risk prediction to high-risk subgroup identification within biopsy GG1-2 patients, on a composite adverse-pathology endpoint (RP GG &ge; 3, EPE, SVI, or pN+).</p>
+
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Predictors and pre-specified transformations</h4>
+        <p>Seven predictors: age, log(PSA + 1), positive-core ratio, fusion-biopsy status, clinical T stage (T1 / T2 / T3+), PI-RADS category (1-2 / 3 / 4 / 5), biopsy ISUP (1 / 2 / 3 / 4 for any-upgrade; 1 / 2 only for major-upgrade subset). Categorical references: cT1, PI-RADS 1-2, ISUP 1.</p>
+
+        <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin:1.2rem 0 0.8rem">Validation summary</h4>
+        <p>Polish derivation cohort: single-surgeon, two-centre series, n = 820 with biopsy ISUP 1-4 (any-upgrade) and n = 616 with biopsy ISUP 1-2 (major-upgrade subset). US validation cohort: BWH multi-surgeon academic series, n = 595 (any-upgrade) and n = 378 (major-upgrade subset). Cluster-bootstrap confidence intervals on US-cohort performance metrics; CR2-corrected cluster-robust standard errors on coefficient inference. Reciprocal validation (US-derive, Polish-validate) returned external AUC 0.78 with calibration slope 0.60 and intercept -0.38, mirroring the discrimination-transports-but-calibration-drifts pattern in the opposite direction. Decision-curve analysis on the recalibrated any-upgrade model exceeded both the treat-all and treat-none reference strategies across the pre-committed 10-40% threshold range.</p>
       </div>
     </div>
   </div>
 
-  <!-- Disclaimer -->
   <div class="disclaimer">
-    <strong>Research tool &mdash; not for clinical decision-making.</strong>
-    This calculator implements models from a single-surgeon, two-center study (n = 599) developed in patients <strong>already selected for radical prostatectomy</strong>. It has undergone year-stratified cross-validation and forward rolling-origin validation but not external validation in independent cohorts. Predictions should not replace clinical judgment. The model predicts <em>any</em> upgrading; clinically significant upgrading (GG1/GG2 to GG3+) is substantially harder to predict (corrected C = 0.653). <strong>This tool should not be used for active-surveillance eligibility decisions.</strong>
+    <strong>Research tool — not for clinical decision-making.</strong>
+    Predicts ISUP grade-group upgrading at radical prostatectomy in patients <strong>already selected for surgery</strong>. Both cohorts are RP-only, which introduces verification bias: men with biopsy ISUP 1 who remain on active surveillance never enter the dataset. <strong>This tool must not be used for active-surveillance eligibility decisions.</strong> The any-upgrade model is reasonable for pre-RARP counselling after local intercept updating among men already selected for surgery; the major-upgrade specification is reported for transparency and is research-only. Predictions do not replace clinical judgment.
   </div>
 
   <div class="footer">
     Jobczyk M, Clinton TN, Ciechanowski P, Frankiewicz M, Drobot RB, Rajwa P, Fendler W, De Carvalho FL, Stawiski K.<br>
-    <em>Preoperative Prediction of ISUP Upgrading After Radical Prostatectomy.</em><br>
-    Prostate Cancer and Prostatic Diseases (submitted 2026).
+    <em>Trans-Atlantic external validation of a pre-operative ISUP-upgrading risk model: pre-registered TRIPOD+AI report.</em><br>
+    MS3 v0.6 (internal review, 2026-05-02).
   </div>
 
 </div>
 
 <script>
-// ── Model coefficients (Rubin-pooled from m=40 MI datasets) ──
-
-const MODEL_A = {
-  intercept: -0.351,
-  age: 0.020,
-  psa: 0.036,
-  gg2: -2.040,
-  gg3plus: -3.424
+// ── Frozen coefficients (Rubin-pooled, m=20 MICE imputations on Polish cohort) ──
+// Mirror of analysis/frozen_models/jobczyk_logistic_any_upgrade_v1.json
+//   SHA256 ac5bff515edce7b6c62e6c0fbf30638440341b8951304a9bcc654d17ed658bd9
+const ANY_UPGRADE = {
+  '(Intercept)': -0.53979959,
+  age: 0.01456306,
+  psa_log: 0.47736703,
+  bx_cores_ratio: 0.60029489,
+  fusion_biopsy: -0.08353269,
+  'clinical_tT2': -0.09174479,
+  'clinical_tT3+': -0.50436826,
+  pirads_cat3: -0.57499214,
+  pirads_cat4: -0.42809584,
+  pirads_cat5: 0.04020851,
+  biopsy_isup2: -2.18111028,
+  biopsy_isup3: -3.39476998,
+  biopsy_isup4: -3.16284953
 };
 
-const MODEL_B = {
-  intercept: -0.313520,
-  age: 0.018848,
-  psa: 0.033039,
-  gg2: -2.097721,
-  gg3plus: -3.559484,
-  pirads4: 0.058911,
-  pirads5: 0.483866,
-  mri_apex: -0.539800,
-  mri_midgland: -0.537733
+// Mirror of analysis/frozen_models/jobczyk_logistic_any_upgrade_dropCT_v1.json
+//   SHA256 a7562a213b4dd2b2e423f8f36461e6837904831fa909f6ce40d1fc9b8e43713c
+//   Drop-cT 6-predictor variant. Recommended deployment alternative when cT is non-comparable.
+const ANY_UPGRADE_DROPCT = {
+  '(Intercept)': -0.58039735,
+  age: 0.01503692,
+  psa_log: 0.46327585,
+  bx_cores_ratio: 0.55732363,
+  fusion_biopsy: -0.07670163,
+  pirads_cat3: -0.55625788,
+  pirads_cat4: -0.43394529,
+  pirads_cat5: -0.01531266,
+  biopsy_isup2: -2.19065875,
+  biopsy_isup3: -3.40977254,
+  biopsy_isup4: -3.20279619
+  // No clinical_t terms: model fitted without cT predictor.
 };
 
-// Cohort observed rates
-const COHORT_RATES = {
-  1: { rate: 0.776, n: 250, upgraded: 194, toGG2: 0.632, toGG3plus: 0.144 },
-  2: { rate: 0.324, n: 207, upgraded: 67, toGG3: 0.261, toGG4plus: 0.063 },
-  3: { rate: 0.133, n: 83, upgraded: 11 },
-  4: { rate: 0.137, n: 51, upgraded: 7, downgraded: 0.647 },
-  5: { rate: 0.000, n: 8, upgraded: 0 }
+// Mirror of analysis/frozen_models/jobczyk_logistic_major_upgrade_v1.json
+//   SHA256 c6e0748255d2e2c485df44d0399c6fc8f8ff43e34523e64182beb0c023074dde
+const MAJOR_UPGRADE = {
+  '(Intercept)': -4.07185078,
+  age: 0.02477035,
+  psa_log: 0.38921265,
+  bx_cores_ratio: 0.42730569,
+  fusion_biopsy: -0.22853352,
+  'clinical_tT2': 0.0594662,
+  'clinical_tT3+': -0.59457562,
+  pirads_cat3: -0.41547712,
+  pirads_cat4: -0.37372886,
+  pirads_cat5: -0.07312183,
+  biopsy_isup2: 0.92018791
+  // No biopsy_isup3/4: model fitted on biopsy GG1-2 subset only.
 };
 
-let currentModel = 'A';
+// Optimism-corrected uniform shrinkage (slope) per frozen-model Polish bootstrap.
+//   any        — full 7-predictor, slope 0.944 (frozen JSON)
+//   any_dropCT — 6-predictor variant, slope 0.953 (frozen JSON)
+//   major      — 7-predictor major-upgrade subset, slope 0.803 (frozen JSON)
+const SHRINKAGE = { any: 0.94356818, any_dropCT: 0.95335720, major: 0.8033769 };
 
-function switchModel(model) {
-  currentModel = model;
-  document.getElementById('tabA').classList.toggle('active', model === 'A');
-  document.getElementById('tabB').classList.toggle('active', model === 'B');
-  document.getElementById('mriSection').classList.toggle('visible', model === 'B');
+// Step-2 intercept update from Van Calster recalibration on US validation cohort
+// (brings calibration intercept to zero on the US cohort).
+//   any        — full 7-predictor, shift -0.19 (Table 3)
+//   any_dropCT — 6-predictor variant, shift -0.14 (Table S18)
+//   major      — 7-predictor major-upgrade, shift -0.44 (manuscript)
+const US_INTERCEPT_SHIFT = { any: -0.188, any_dropCT: -0.139, major: -0.439 };
 
-  // Recalculate if results are visible
+// Biopsy-ISUP stratum counts from Table 1 (any-upgrade analytic set).
+// Polish n = 820; US n = 595. Verbatim from tables/table1_smd.csv.
+const COHORT_ANY = {
+  1: { polN: 332, usN: 67,  label: 'GG1 (3+3)' },
+  2: { polN: 284, usN: 311, label: 'GG2 (3+4)' },
+  3: { polN: 120, usN: 150, label: 'GG3 (4+3)' },
+  4: { polN: 84,  usN: 67,  label: 'GG4 (4+4)' }
+};
+// Aggregate counts only — per-stratum rates not exposed at this resolution; show overall.
+const ANY_OVERALL = { polN: 820, polEvents: 377, polRate: 0.460, usN: 595, usEvents: 148, usRate: 0.249 };
+const MAJOR_OVERALL = { polN: 616, polEvents: 139, polRate: 0.226, usN: 378, usEvents: 63, usRate: 0.167 };
+
+let endpoint = 'any';
+
+function getVariantKey() {
+  if (endpoint === 'major') return 'major';
+  const v = document.querySelector('input[name="modelvariant"]:checked');
+  return v && v.value === 'dropCT' ? 'any_dropCT' : 'any';
+}
+
+function getCoefForVariant(variantKey) {
+  if (variantKey === 'major') return MAJOR_UPGRADE;
+  if (variantKey === 'any_dropCT') return ANY_UPGRADE_DROPCT;
+  return ANY_UPGRADE;
+}
+
+function switchEndpoint(ep) {
+  endpoint = ep;
+  document.getElementById('tabAny').classList.toggle('active', ep === 'any');
+  document.getElementById('tabMajor').classList.toggle('active', ep === 'major');
+  document.getElementById('majorBanner').classList.toggle('visible', ep === 'major');
+  document.getElementById('variantCard').style.display = ep === 'any' ? '' : 'none';
+
+  const isupGroup = document.getElementById('isupRadios');
+  isupGroup.querySelectorAll('[data-isup]').forEach(node => {
+    if (ep === 'major') {
+      node.style.display = 'none';
+      const inp = node.querySelector('input');
+      if (inp.checked) inp.checked = false;
+    } else {
+      node.style.display = '';
+    }
+  });
+
   if (document.getElementById('resultsPanel').classList.contains('visible')) {
     calculate();
   }
 }
 
-function logistic(logit) {
-  return Math.exp(logit) / (1 + Math.exp(logit));
-}
+document.addEventListener('change', e => {
+  if (e.target && e.target.name === 'modelvariant' &&
+      document.getElementById('resultsPanel').classList.contains('visible')) {
+    calculate();
+  }
+});
 
-function predictA(age, psa, isup) {
-  const gg2 = isup === 2 ? 1 : 0;
-  const gg3plus = isup >= 3 ? 1 : 0;
-  const lp = MODEL_A.intercept + MODEL_A.age * age + MODEL_A.psa * psa
-           + MODEL_A.gg2 * gg2 + MODEL_A.gg3plus * gg3plus;
-  return logistic(lp);
-}
+function logistic(lp) { return 1 / (1 + Math.exp(-lp)); }
 
-function predictB(age, psa, isup, pirads, apex, midgland) {
-  const gg2 = isup === 2 ? 1 : 0;
-  const gg3plus = isup >= 3 ? 1 : 0;
-  const p4 = pirads === 4 ? 1 : 0;
-  const p5 = pirads === 5 ? 1 : 0;
-  const lp = MODEL_B.intercept + MODEL_B.age * age + MODEL_B.psa * psa
-           + MODEL_B.gg2 * gg2 + MODEL_B.gg3plus * gg3plus
-           + MODEL_B.pirads4 * p4 + MODEL_B.pirads5 * p5
-           + MODEL_B.mri_apex * (apex ? 1 : 0)
-           + MODEL_B.mri_midgland * (midgland ? 1 : 0);
-  return logistic(lp);
+function buildLp(coef, vals) {
+  let lp = coef['(Intercept)'];
+  lp += coef.age * vals.age;
+  lp += coef.psa_log * Math.log(vals.psa + 1);
+  lp += coef.bx_cores_ratio * vals.coreRatio;
+  lp += coef.fusion_biopsy * (vals.fusion ? 1 : 0);
+  if (coef['clinical_tT2'] !== undefined) {
+    if (vals.ct === 'T2') lp += coef['clinical_tT2'];
+    else if (vals.ct === 'T3+') lp += coef['clinical_tT3+'];
+  }
+  if (vals.pirads === '3') lp += coef.pirads_cat3;
+  else if (vals.pirads === '4') lp += coef.pirads_cat4;
+  else if (vals.pirads === '5') lp += coef.pirads_cat5;
+  if (vals.isup === 2) lp += coef.biopsy_isup2;
+  else if (vals.isup === 3 && coef.biopsy_isup3 !== undefined) lp += coef.biopsy_isup3;
+  else if (vals.isup === 4 && coef.biopsy_isup4 !== undefined) lp += coef.biopsy_isup4;
+  return lp;
 }
 
 function calculate() {
   const age = parseFloat(document.getElementById('age').value);
   const psa = parseFloat(document.getElementById('psa').value);
   const isupEl = document.querySelector('input[name="isup"]:checked');
+  const corePos = parseFloat(document.getElementById('cores_pos').value);
+  const coreTotal = parseFloat(document.getElementById('cores_total').value);
+  const ctEl = document.querySelector('input[name="ct"]:checked');
+  const piradsEl = document.querySelector('input[name="pirads"]:checked');
+  const fusion = document.getElementById('fusion_biopsy').checked;
 
-  if (isNaN(age) || isNaN(psa) || !isupEl) {
-    alert('Please fill in all required fields: Age, PSA, and ISUP Grade Group.');
+  const variantKey = getVariantKey();
+  const ctRequired = variantKey !== 'any_dropCT';
+
+  if (isNaN(age) || isNaN(psa) || !isupEl || isNaN(corePos) || isNaN(coreTotal) || !piradsEl ||
+      (ctRequired && !ctEl)) {
+    alert('Please fill in all fields: age, PSA, biopsy ISUP, positive cores, total cores' +
+          (ctRequired ? ', cT stage' : '') + ', PI-RADS.');
     return;
   }
+  if (coreTotal <= 0) { alert('Total biopsy cores must be > 0.'); return; }
+  if (corePos > coreTotal) { alert('Positive cores cannot exceed total cores.'); return; }
 
   const isup = parseInt(isupEl.value);
+  const vals = {
+    age, psa,
+    coreRatio: corePos / coreTotal,
+    fusion,
+    ct: ctEl ? ctEl.value : 'T1',
+    pirads: piradsEl.value,
+    isup
+  };
 
-  // Always compute both models (for comparison)
-  const probA = predictA(age, psa, isup);
-  let probB = null;
+  const coef = getCoefForVariant(variantKey);
+  const lp = buildLp(coef, vals);
+  const probFrozen = logistic(lp);
+  const probShrunk = logistic(lp * SHRINKAGE[variantKey]);
+  const probRecal = logistic(lp + US_INTERCEPT_SHIFT[variantKey]);
 
-  if (currentModel === 'B') {
-    const piradsEl = document.querySelector('input[name="pirads"]:checked');
-    if (!piradsEl) {
-      alert('Please select a PI-RADS score for Model B.');
-      return;
-    }
-    const pirads = parseInt(piradsEl.value);
-    const apex = document.getElementById('mri_apex').checked;
-    const midgland = document.getElementById('mri_midgland').checked;
-    probB = predictB(age, psa, isup, pirads, apex, midgland);
-  } else {
-    // Estimate Model B with PI-RADS <=3 and no lesion locations as baseline
-    probB = predictB(age, psa, isup, 3, false, false);
-  }
-
-  const primaryProb = currentModel === 'A' ? probA : probB;
-  displayResults(primaryProb, probA, probB, isup);
+  displayResults(probFrozen, probShrunk, probRecal, isup, variantKey);
 }
 
-function displayResults(primary, probA, probB, isup) {
+function displayResults(probFrozen, probShrunk, probRecal, isup, variantKey) {
   const panel = document.getElementById('resultsPanel');
   panel.classList.add('visible');
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // Gauge
+  const primary = probFrozen;
   const pct = (primary * 100).toFixed(1);
-  const arcLength = 251.33;
+  const arcLength = 267.04;
   const offset = arcLength * (1 - primary);
   const fill = document.getElementById('gaugeFill');
-  const color = primary < 0.3 ? 'var(--low-risk)' : primary < 0.6 ? 'var(--warning)' : 'var(--high-risk)';
+  const color = primary < 0.15 ? 'var(--low-risk)' : primary < 0.35 ? 'var(--warning)' : 'var(--high-risk)';
   fill.style.stroke = color;
   fill.style.strokeDashoffset = offset;
   document.getElementById('gaugeValue').textContent = pct + '%';
+  const variantLabel = variantKey === 'any_dropCT' ? 'any upgrade (drop-cT)'
+                     : variantKey === 'major' ? 'major upgrade'
+                     : 'any upgrade';
+  document.getElementById('gaugeLabel').textContent = variantLabel;
 
-  // Risk label
   const label = document.getElementById('riskLabel');
   label.style.display = 'inline-block';
-  if (primary < 0.3) {
-    label.textContent = 'Lower risk';
+  if (primary < 0.15) {
+    label.textContent = 'Below 15% threshold';
     label.className = 'risk-label risk-low';
-  } else if (primary < 0.6) {
-    label.textContent = 'Moderate risk';
+  } else if (primary < 0.35) {
+    label.textContent = 'Above 15% threshold';
     label.className = 'risk-label risk-moderate';
   } else {
-    label.textContent = 'Higher risk';
+    label.textContent = 'Above 25% threshold';
     label.className = 'risk-label risk-high';
   }
 
-  // Comparison bars
-  const barA = document.getElementById('barA');
-  const barB = document.getElementById('barB');
-  barA.style.width = (probA * 100).toFixed(1) + '%';
-  barB.style.width = (probB * 100).toFixed(1) + '%';
-  document.getElementById('barAVal').textContent = (probA * 100).toFixed(1) + '%';
-  document.getElementById('barBVal').textContent = (probB * 100).toFixed(1) + '%';
+  setBar('barFrozen', 'barFrozenVal', probFrozen);
+  setBar('barShrunk', 'barShrunkVal', probShrunk);
+  setBar('barRecal', 'barRecalVal', probRecal);
 
-  const delta = probB - probA;
-  const deltaText = delta >= 0
-    ? '+' + (delta * 100).toFixed(1) + ' pp'
-    : (delta * 100).toFixed(1) + ' pp';
-  document.getElementById('deltaNote').textContent =
-    'Delta (B \u2212 A): ' + deltaText + ' \u2014 ' +
-    (Math.abs(delta) < 0.02 ? 'negligible difference' :
-     Math.abs(delta) < 0.05 ? 'small difference' : 'moderate difference');
+  const variantPrettyName = variantKey === 'any_dropCT' ? 'drop-cT 6-predictor any-upgrade'
+                          : variantKey === 'major' ? 'major-upgrade'
+                          : 'full 7-predictor any-upgrade';
+  document.getElementById('variantNote').innerHTML =
+    '<strong>Frozen:</strong> coefficients as published, no recalibration. ' +
+    '<strong>Shrinkage ' + SHRINKAGE[variantKey].toFixed(3) + ':</strong> uniform shrinkage of the linear predictor by the optimism-corrected calibration slope (' + variantPrettyName + '). ' +
+    '<strong>US-recalibrated:</strong> step-2 intercept update from Van Calster recalibration on the BWH validation cohort (intercept shift ' + US_INTERCEPT_SHIFT[variantKey].toFixed(2) + '). ' +
+    'Use shrinkage when generalising and intercept-update when targeting US-academic case-mix.';
 
-  if (currentModel === 'B') {
-    document.getElementById('comparisonSection').style.display = 'block';
-  } else {
-    // Still show comparison but with note
-    document.getElementById('comparisonSection').style.display = 'block';
-    document.getElementById('deltaNote').textContent +=
-      ' (Model B shown with PI-RADS \u22643, no lesion locations)';
-  }
-
-  // Highlight current grade group row
-  ['ctxGG1','ctxGG2','ctxGG3','ctxGG4','ctxGG5'].forEach((id, i) => {
-    document.getElementById(id).className = (i + 1 === isup) ? 'highlight-row' : '';
-  });
-
-  // Interpretation
-  buildInterpretation(primary, probA, probB, isup);
+  buildInterpretation(probFrozen, probShrunk, probRecal, isup, variantKey);
+  buildContextTable(isup);
 }
 
-function buildInterpretation(primary, probA, probB, isup) {
-  const pct = (primary * 100).toFixed(1);
-  const cohort = COHORT_RATES[isup];
-  const observed = (cohort.rate * 100).toFixed(1);
+function setBar(barId, labelId, prob) {
+  const bar = document.getElementById(barId);
+  const lab = document.getElementById(labelId);
+  bar.style.width = (prob * 100).toFixed(1) + '%';
+  lab.textContent = (prob * 100).toFixed(1) + '%';
+}
+
+function buildInterpretation(probFrozen, probShrunk, probRecal, isup, variantKey) {
+  const pct = (probFrozen * 100).toFixed(1);
+  const recalPct = (probRecal * 100).toFixed(1);
   let html = '';
 
-  // Main interpretation
   html += '<div class="interp-card">';
   html += '<h4>Patient-specific prediction</h4>';
-  html += '<p>The predicted probability of <strong>any ISUP upgrading</strong> at radical prostatectomy is <span class="highlight-stat">' + pct + '%</span>';
-
-  if (currentModel === 'A') {
-    html += ' (Model A, clinic-only).';
+  if (variantKey === 'any') {
+    html += '<p>The frozen 7-predictor any-upgrade model returns a predicted probability of <span class="highlight-stat">' + pct + '%</span> that prostatectomy ISUP exceeds biopsy ISUP. Step-2-recalibrated estimate (US case-mix): <span class="highlight-stat">' + recalPct + '%</span>.</p>';
+  } else if (variantKey === 'any_dropCT') {
+    html += '<p>The drop-cT 6-predictor any-upgrade model returns a predicted probability of <span class="highlight-stat">' + pct + '%</span> that prostatectomy ISUP exceeds biopsy ISUP. Step-2-recalibrated estimate (US case-mix): <span class="highlight-stat">' + recalPct + '%</span>. This specification omits clinical T stage and is recommended when cT staging conventions are not comparable across practice environments — external AUC 0.732 versus 0.731 for the full model (Table S18).</p>';
   } else {
-    html += ' (Model B, clinic + MRI).';
-  }
-
-  html += ' The observed upgrading rate for GG' + isup + ' patients in the development cohort was ' + observed + '% (' + cohort.upgraded + '/' + cohort.n + ').</p>';
-  html += '</div>';
-
-  // Grade-specific context
-  html += '<div class="interp-card">';
-  html += '<h4>Grade group context</h4>';
-
-  if (isup === 1) {
-    html += '<ul>';
-    html += '<li>GG1 patients have the highest upgrading rate (77.6%) because there are more possible grades to upgrade to.</li>';
-    html += '<li>Most GG1 upgrading is to GG2 (63.2%), which may not alter management in many cases.</li>';
-    html += '<li>The clinically important GG1-to-GG3+ rate was <strong>14.4%</strong> (95% CI 10.0\u201318.8%).</li>';
-    html += '<li>Within GG1, PI-RADS 5 patients had 88.4% upgrading vs 62.9% for PI-RADS 1\u20133.</li>';
-    html += '</ul>';
-  } else if (isup === 2) {
-    html += '<ul>';
-    html += '<li>GG2 patients had a 32.4% overall upgrading rate.</li>';
-    html += '<li>26.1% were upgraded to GG3 and 6.3% to GG4/5.</li>';
-    html += '<li>GG2-to-GG3+ upgrading (major upgrading, corrected C = 0.591) remains difficult to predict.</li>';
-    html += '</ul>';
-  } else if (isup === 3) {
-    html += '<ul>';
-    html += '<li>GG3 patients had a 13.3% upgrading rate (8.4% to GG4, 4.8% to GG5).</li>';
-    html += '<li>Most GG3 patients (68.7%) had concordant pathology.</li>';
-    html += '</ul>';
-  } else if (isup === 4) {
-    html += '<ul>';
-    html += '<li>GG4 patients had only 13.7% upgrading (to GG5) but notable <strong>64.7% downgrading</strong>.</li>';
-    html += '<li>21.6% were reclassified to GG2 and 43.1% to GG3 at prostatectomy.</li>';
-    html += '<li>This high downgrading rate is consistent with the known difficulty of reliably grading Gleason pattern 4 on biopsy.</li>';
-    html += '</ul>';
-  } else {
-    html += '<p>GG5 is the highest grade group; upgrading is not possible by definition. All 8 GG5 patients remained at GG5 (50%) or were downgraded (50%).</p>';
+    html += '<p>The frozen major-upgrade model returns a predicted probability of <span class="highlight-stat">' + pct + '%</span> that biopsy GG' + isup + ' progresses to RP GG &ge; 3. Step-2-recalibrated estimate (US case-mix): <span class="highlight-stat">' + recalPct + '%</span>. <strong>This endpoint did not transport across cohorts; treat the number as a research summary.</strong></p>';
   }
   html += '</div>';
 
-  // Clinical note
+  if (variantKey === 'any' || variantKey === 'any_dropCT') {
+    html += '<div class="interp-card">';
+    html += '<h4>Decision-threshold context</h4>';
+    html += '<ul>';
+    html += '<li><strong>15% threshold:</strong> typical pre-RARP action point for intensified PLND templating, modulation of nerve-sparing extent, and post-operative surveillance scheduling. Net benefit 0.121 (recalibrated) vs 0.116 (treat-all).</li>';
+    html += '<li><strong>25% threshold:</strong> more aggressive action point. Net benefit 0.091 (recalibrated) vs negative for treat-all.</li>';
+    html += '<li>The full seven-predictor model contributes essentially no external discrimination beyond biopsy ISUP plus log-PSA (AUC 0.731 vs 0.732). Most of the rank-ordering signal comes from biopsy grade and PSA.</li>';
+    html += '<li>Drop-cT 6-predictor variant is the recommended deployment when cT staging is unreliable across practice environments.</li>';
+    html += '</ul>';
+    html += '</div>';
+  } else {
+    html += '<div class="interp-card">';
+    html += '<h4>Why this endpoint did not transport</h4>';
+    html += '<ul>';
+    html += '<li>External AUC 0.632 (95% CI 0.553-0.709). Discrimination is essentially equivalent to biopsy ISUP plus log-PSA alone.</li>';
+    html += '<li>The post-hoc 11-predictor extended-feature ridge model (added log-PSA density, MRI lesion size, MRI-suspected EPE/SVI, lesion count, raw biopsy-core counts) underperformed the frozen model (external AUC 0.564 vs 0.632), driven by structurally low coverage of MRI predictors in the Polish derivation cohort.</li>';
+    html += '<li>The successor study (MS4) reframes this question from continuous-risk prediction to high-risk-subgroup identification on a composite adverse-pathology endpoint (RP GG &ge; 3, EPE, SVI, or pN+), approximately doubling event count.</li>';
+    html += '</ul>';
+    html += '</div>';
+  }
+
   html += '<div class="interp-card">';
   html += '<h4>Important caveats</h4>';
   html += '<ul>';
-  html += '<li>This model predicts <strong>any upgrading</strong> (prostatectomy ISUP > biopsy ISUP), including the common GG1\u2192GG2 transition which may not change management.</li>';
-  html += '<li><strong>Clinically significant upgrading</strong> (GG1/GG2 to GG3+) had corrected C = 0.653, indicating limited predictability.</li>';
-  html += '<li>The model was developed in an RP-selected cohort (single surgeon, two Polish centers). External validation has not been performed.</li>';
-  html += '<li>MRI variables (PI-RADS, lesion location) added negligible discrimination after optimism correction (&Delta;C = +0.004).</li>';
-  html += '<li>ISUP grade group and PSA accounted for nearly all discrimination (nested comparator analysis).</li>';
-  html += '<li>At the Youden-optimal threshold (predicted probability \u226570%), sensitivity was 69.1% and specificity 83.8% (PPV 78.7%, NPV 75.7%).</li>';
+  html += '<li>Both cohorts are restricted to RP-treated patients, which introduces verification bias against patients on active surveillance.</li>';
+  html += '<li>Polish derivation cohort is single-surgeon, two-centre; US validation cohort is multi-surgeon (16 operators) academic-tertiary. Surgeon-level clustering was addressed via cluster-bootstrap CIs and CR2-corrected cluster-robust standard errors.</li>';
+  html += '<li>Pre-specified transportability threshold &Delta;AUC &le; 0.05 was not met for any-upgrade (observed 0.067) but the bootstrap upper bound &le; 0.12 supports use after local intercept updating.</li>';
+  html += '<li>This is not a CE-marked or FDA-approved clinical decision-support tool.</li>';
   html += '</ul>';
   html += '</div>';
 
   document.getElementById('interpContent').innerHTML = html;
+}
+
+function buildContextTable(isup) {
+  const overall = endpoint === 'any' ? ANY_OVERALL : MAJOR_OVERALL;
+  document.getElementById('contextHeader').innerHTML =
+    'Overall ' + (endpoint === 'any' ? 'any-upgrade' : 'major-upgrade') + ' rates: ' +
+    '<strong>Polish</strong> ' + overall.polEvents + '/' + overall.polN + ' (' + (overall.polRate * 100).toFixed(1) + '%) &middot; ' +
+    '<strong>US</strong> ' + overall.usEvents + '/' + overall.usN + ' (' + (overall.usRate * 100).toFixed(1) + '%).';
+
+  const tbody = document.getElementById('contextTableBody');
+  tbody.innerHTML = '';
+  const eligibleGgs = endpoint === 'major' ? [1, 2] : [1, 2, 3, 4];
+  const polTotal = endpoint === 'major' ? 616 : 820;
+  const usTotal = endpoint === 'major' ? 378 : 595;
+  eligibleGgs.forEach(gg => {
+    const row = COHORT_ANY[gg];
+    const tr = document.createElement('tr');
+    if (gg === isup) tr.className = 'highlight-row';
+    const polPct = (row.polN / polTotal * 100).toFixed(1);
+    const usPct = (row.usN / usTotal * 100).toFixed(1);
+    tr.innerHTML = '<td>' + row.label + '</td>' +
+      '<td>' + row.polN + ' (' + polPct + '%)</td>' +
+      '<td>' + row.usN + ' (' + usPct + '%)</td>';
+    tbody.appendChild(tr);
+  });
 }
 
 function toggleInfo() {
@@ -1109,25 +1154,16 @@ function toggleInfo() {
 }
 
 function resetForm() {
-  document.getElementById('age').value = '';
-  document.getElementById('psa').value = '';
-  document.querySelectorAll('input[name="isup"]').forEach(r => r.checked = false);
-  document.querySelectorAll('input[name="pirads"]').forEach(r => r.checked = false);
-  document.getElementById('mri_apex').checked = false;
-  document.getElementById('mri_midgland').checked = false;
-  document.getElementById('mri_base').checked = false;
+  ['age', 'psa', 'cores_pos', 'cores_total'].forEach(id => document.getElementById(id).value = '');
+  document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+  document.getElementById('fusion_biopsy').checked = false;
   document.getElementById('resultsPanel').classList.remove('visible');
-
-  // Reset gauge
-  document.getElementById('gaugeFill').style.strokeDashoffset = '251.33';
-  document.getElementById('gaugeValue').textContent = '\u2014';
+  document.getElementById('gaugeFill').style.strokeDashoffset = '267.04';
+  document.getElementById('gaugeValue').textContent = '—';
   document.getElementById('riskLabel').style.display = 'none';
 }
 
-// Allow Enter key to calculate
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') calculate();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
 </script>
 
 </body>
