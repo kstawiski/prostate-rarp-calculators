@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prostate RARP Clinical Calculators — Jobczyk et al. 2026</title>
+    <title>Prostate AS-Counselling Calculator — Jobczyk et al. 2026</title>
+    <meta name="description" content="Externally validated biopsy-to-prostatectomy ISUP-upgrade risk calculator supporting active-surveillance counselling. Polish derivation (n=820), US BWH validation (n=562).">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -17,7 +18,7 @@
             padding: 2rem;
         }
         .container {
-            max-width: 900px;
+            max-width: 720px;
             width: 100%;
         }
         h1 {
@@ -28,21 +29,17 @@
             font-weight: 700;
         }
         .subtitle {
-            color: rgba(255,255,255,0.85);
+            color: rgba(255,255,255,0.88);
             text-align: center;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             margin-bottom: 2.5rem;
-        }
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 1.5rem;
+            line-height: 1.55;
         }
         .card {
             background: white;
             border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            padding: 2.2rem 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.18);
             transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
             text-decoration: none;
@@ -51,84 +48,92 @@
         }
         .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.28);
         }
         .card-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.7rem;
+            margin-bottom: 1.1rem;
+            background: rgba(5,136,155,0.12);
+            color: #05889b;
         }
-        .card-icon.green { background: rgba(5,136,155,0.1); color: #05889b; }
-        .card-icon.purple { background: rgba(0,82,96,0.1); color: #005260; }
-        .card-icon.blue { background: rgba(5,136,155,0.15); color: #047a8b; }
         .card h2 {
-            font-size: 1.15rem;
-            margin-bottom: 0.5rem;
+            font-size: 1.35rem;
+            margin-bottom: 0.55rem;
             color: #1a1a2e;
+            font-weight: 700;
         }
-        .card p {
-            font-size: 0.9rem;
-            color: #555;
-            line-height: 1.5;
+        .card .description {
+            font-size: 0.95rem;
+            color: #4b4f56;
+            line-height: 1.6;
+            margin-bottom: 0.85rem;
         }
-        .card .badge {
+        .card .stats {
+            font-size: 0.85rem;
+            color: #6b7280;
+            line-height: 1.55;
+            margin-bottom: 0.85rem;
+        }
+        .card .stats strong { color: #1a1a2e; }
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .badge {
             display: inline-block;
-            font-size: 0.75rem;
-            padding: 0.2rem 0.6rem;
+            font-size: 0.74rem;
+            padding: 0.22rem 0.6rem;
             border-radius: 20px;
-            margin-top: 0.75rem;
             font-weight: 600;
+            background: rgba(5,136,155,0.12);
+            color: #05889b;
+            letter-spacing: 0.02em;
         }
-        .badge.green { background: rgba(5,136,155,0.1); color: #05889b; }
-        .badge.purple { background: rgba(0,82,96,0.1); color: #005260; }
-        .badge.blue { background: rgba(5,136,155,0.15); color: #047a8b; }
+        .badge.warn { background: rgba(214,158,46,0.18); color: #8b5e02; }
         .footer {
             text-align: center;
-            color: rgba(255,255,255,0.7);
+            color: rgba(255,255,255,0.75);
             margin-top: 2.5rem;
             font-size: 0.85rem;
             line-height: 1.6;
         }
-        .footer a { color: rgba(255,255,255,0.9); }
+        .footer a {
+            color: rgba(255,255,255,0.92);
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Prostate RARP Clinical Calculators</h1>
-        <p class="subtitle">Interactive tools from Jobczyk, Clinton, De Carvalho & Stawiski (2026)<br>
-        Polish development cohort (n=820, 2021-2025) &middot; US BWH external-validation cohort (n=595)</p>
+        <h1>Prostate AS-Counselling Calculator</h1>
+        <p class="subtitle">Externally validated biopsy-to-prostatectomy ISUP-upgrade risk model<br>
+        supporting shared-decision discussion about active surveillance.</p>
 
-        <div class="cards">
-            <a class="card" href="ms3/">
-                <div class="card-icon green">&#x1F4CA;</div>
-                <h2>ISUP Upgrading Prediction</h2>
-                <p>Pre-registered, externally validated predictor of ISUP grade-group upgrading from biopsy to RP. Polish development (n=820) → US BWH validation (n=595). Three SHA256-locked specifications: full 7-pred (external AUC 0.731), drop-cT 6-pred (0.732), and major-upgrade subset (0.632, research-only).</p>
-                <span class="badge green">MS3 v0.6 — TRIPOD+AI</span>
-            </a>
-
-            <a class="card" href="ms2/">
-                <div class="card-icon purple">&#x1F3AF;</div>
-                <h2>EPE Prediction</h2>
-                <p>Estimate probability of extraprostatic extension using 8 preoperative predictors. LASSO-penalized logistic regression with bootstrap validation (corrected AUC=0.714).</p>
-                <span class="badge purple">n=492, 174 events</span>
-            </a>
-
-            <a class="card" href="ms1/">
-                <div class="card-icon blue">&#x2696;&#xFE0F;</div>
-                <h2>DaVinci vs Versius Dashboard</h2>
-                <p>Interactive results dashboard comparing perioperative outcomes between robotic platforms. Overlap-weighted analysis with falsification testing.</p>
-                <span class="badge blue">n=602, dual platform</span>
-            </a>
-        </div>
+        <a class="card" href="ms3/">
+            <div class="card-icon">&#x1F4CA;</div>
+            <h2>ISUP Upgrade Risk &mdash; AS-Counselling Tool</h2>
+            <p class="description">Predicts the probability that the prostatectomy ISUP grade will exceed the biopsy ISUP grade. Designed for biopsy-ISUP-1-2 patients considering active surveillance, with a Polish-derived rule-in operating point validated externally on a US academic cohort.</p>
+            <p class="stats"><strong>Derivation:</strong> Polish single-surgeon cohort, n = 820 &middot; <strong>External validation:</strong> Brigham and Women's Hospital, n = 562 &middot; <strong>AS-eligible (biopsy ISUP 1-2) subset:</strong> n = 357, external AUC 0.771 (95% CI 0.670-0.846) &middot; <strong>Operating point 0.65:</strong> PPV 85.5%, specificity 96.6%.</p>
+            <div class="badge-row">
+                <span class="badge">MS3 v1.0</span>
+                <span class="badge">TRIPOD+AI 2024</span>
+                <span class="badge warn">Research tool &mdash; not a CDS device</span>
+            </div>
+        </a>
 
         <div class="footer">
-            <p>For research and educational use only. Not a substitute for clinical judgment.</p>
-            <p>Source data: Single Polish academic urology center, 2021-2025.</p>
+            Jobczyk M, Clinton TN, De Carvalho FL, Ciechanowski P, Mouw KW, Fendler W, Stawiski K (2026).<br>
+            <em>Externally validated biopsy-to-prostatectomy ISUP upgrade risk model: a TRIPOD+AI report supporting active-surveillance counselling.</em><br>
+            Submitted to <em>Prostate Cancer and Prostatic Diseases</em>.<br>
+            Source code: <a href="https://github.com/kstawiski/prostate-rarp-calculators">github.com/kstawiski/prostate-rarp-calculators</a>
         </div>
     </div>
 </body>
