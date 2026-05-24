@@ -545,7 +545,7 @@
 <div class="container">
 
   <div class="banner">
-    <strong>How to use this tool.</strong> Enter the biopsy results and clinical details. The calculator provides the calibrated chance of finding a higher prostatectomy grade than the biopsy showed, along with a rule-in check at the 0.65 threshold (predicted probability 0.65). In the external validation group of 357 active-surveillance-eligible patients (biopsy ISUP grade 1 or 2, n=357), this 0.65 threshold identified a group where about 85 in 100 patients had a higher grade at surgery (positive predictive value 85.5%, 95% CI 71.2-93.4). Use the rule-in check to identify patients who may need closer discussion about surgery, and use the calibrated probability to guide surveillance decisions for other patients.
+    <strong>How to use this tool.</strong> Enter the biopsy results and clinical details. The calculator provides the calibrated chance of finding a higher prostatectomy grade than the biopsy showed, along with a group classification when the full 7-predictor model is used. In the external validation group of 357 active-surveillance-eligible patients (biopsy ISUP grade 1 or 2), the higher-likelihood group included about 19% of patients and about 85 in 100 of them had a higher grade at surgery (positive predictive value 85.5%, 95% CI 71.2-93.4). Use the group classification to identify patients who may need closer discussion about surgery, and use the calibrated probability to guide surveillance decisions for other patients.
   </div>
 
   <div class="mode-tabs" role="tablist" style="margin-bottom:0.6rem">
@@ -570,7 +570,7 @@
     </button>
     <button class="mode-tab" id="tabFull" onclick="switchMode('full')" role="tab">
       Full-data mode
-      <span class="mode-tab-sub">7 predictors using the validated 0.65 threshold</span>
+      <span class="mode-tab-sub">7 predictors with validated group classification</span>
     </button>
   </div>
 
@@ -1211,21 +1211,21 @@ function renderGauge(prob, r) {
   label.style.display = 'inline-block';
   if (fullAnyAsEligible) {
     if (prob >= OPERATING_POINTS.AS_RULE_IN) {
-      label.textContent = 'Above the 0.65 rule-in threshold';
+      label.textContent = 'Higher-likelihood group (about 85 in 100 had upgrade in similar patients)';
       label.className = 'risk-label risk-high';
     } else if (prob >= 0.30) {
-      label.textContent = 'Intermediate (shared decision range)';
+      label.textContent = 'Intermediate range (shared decision-making)';
       label.className = 'risk-label risk-moderate';
     } else {
-      label.textContent = 'Below the rule-in threshold';
+      label.textContent = 'Lower-likelihood group';
       label.className = 'risk-label risk-low';
     }
   } else if (r.endpoint === 'major') {
     label.textContent = 'Research-only, consult external validation caveats';
     label.className = 'risk-label risk-moderate';
   } else if (r.mode === 'parsimonious') {
-    if (prob >= 0.65) label.textContent = 'High predicted probability, no validated 0.65 threshold';
-    else if (prob >= 0.30) label.textContent = 'Intermediate (shared decision range)';
+    if (prob >= 0.65) label.textContent = 'Higher predicted probability (group classification not available in this mode)';
+    else if (prob >= 0.30) label.textContent = 'Intermediate range (shared decision-making)';
     else label.textContent = 'Lower predicted probability';
     label.className = prob >= 0.65 ? 'risk-label risk-high'
                       : (prob >= 0.30 ? 'risk-label risk-moderate' : 'risk-label risk-low');
@@ -1300,10 +1300,12 @@ function renderOperatingPoint(prob, r) {
     const ruleIn = prob >= OPERATING_POINTS.AS_RULE_IN;
     html += '<div class="interp-card">';
     if (ruleIn) {
-      html += '<h4>Above the active surveillance rule-in threshold (0.65, full 7-predictor model)</h4>';
-      html += '<p>This patient is among the <span class="highlight-stat">' +
+      html += '<h4>Higher-likelihood group identified by the full 7-predictor model</h4>';
+      html += '<p>About <span class="highlight-stat">' +
         (PERFORMANCE_AT_065.highRiskFraction * 100).toFixed(0) +
-        '% (68/357)</span> of active-surveillance-eligible patients in the external US validation cohort who were flagged as high risk using the 0.65 threshold. For patients at this operating point:</p>';
+        '% (68/357)</span> of active-surveillance-eligible patients in the external US validation cohort fell into this band. Of those, about 85 in 100 (positive predictive value <strong>' + (PERFORMANCE_AT_065.ppv.point * 100).toFixed(1) +
+        '%</strong>, 95% CI ' + (PERFORMANCE_AT_065.ppv.lo * 100).toFixed(1) + ' to ' +
+        (PERFORMANCE_AT_065.ppv.hi * 100).toFixed(1) + ') had a higher grade at surgery. For patients at this operating point:</p>';
       html += '<ul style="margin-top:0.45rem">';
       html += '<li>About 85 in 100 patients with this profile had a higher prostatectomy grade than their biopsy (positive predictive value <strong>' + (PERFORMANCE_AT_065.ppv.point * 100).toFixed(1) +
         '%</strong>, 95% CI ' + (PERFORMANCE_AT_065.ppv.lo * 100).toFixed(1) + ' to ' +
@@ -1316,24 +1318,25 @@ function renderOperatingPoint(prob, r) {
         (PERFORMANCE_AT_065.sens.hi * 100).toFixed(1) + ').</li>';
       html += '</ul>';
     } else {
-      html += '<h4>Below the active surveillance rule-in threshold (0.65, full 7-predictor model)</h4>';
+      html += '<h4>Lower-likelihood group identified by the full 7-predictor model</h4>';
       html += '<p>This patient is among the <span class="highlight-stat">' +
         (100 - PERFORMANCE_AT_065.highRiskFraction * 100).toFixed(0) +
-        '% (289/357)</span> of active-surveillance-eligible patients in the external US validation cohort who fell below the 0.65 threshold. The calibrated chance of finding a higher grade at surgery is the main number to discuss during counselling, as the rule-in category does not apply. About 79 in 100 patients below this threshold did not have a higher grade at surgery (negative predictive value ' +
+        '% (289/357)</span> of active-surveillance-eligible patients in the external US validation cohort who fell into this band. The calibrated chance of finding a higher grade at surgery is the main number to discuss during counselling. About 79 in 100 patients in this band did not have a higher grade at surgery (negative predictive value ' +
         (PERFORMANCE_AT_065.npv.point * 100).toFixed(1) + '%, 95% CI ' +
         (PERFORMANCE_AT_065.npv.lo * 100).toFixed(1) + ' to ' + (PERFORMANCE_AT_065.npv.hi * 100).toFixed(1) +
-        '), which means about 1 in 5 patients below this threshold were still found to have a higher grade after surgery.</p>';
+        '), which means about 1 in 5 patients in the lower-likelihood group still had a higher grade at surgery (negative predictive value ' +
+        (PERFORMANCE_AT_065.npv.point * 100).toFixed(1) + '%).</p>';
     }
     html += '</div>';
   } else if (asEligible && r.mode === 'parsimonious') {
     html += '<div class="interp-card">';
-    html += '<h4>Threshold classification not available in parsimonious mode</h4>';
-    html += '<p>The 0.65 rule-in threshold and its validation results, including a positive predictive value of 85.5%, a sensitivity of 44.8%, a specificity of 96.6%, and a negative predictive value of 79.4% on 357 patients, were determined using the full 7-predictor model. The simpler 2-predictor model calculates risk on a different scale, so the 0.65 threshold does not have the same meaning. Use the calibrated chance of a higher grade to guide the discussion, and select full-data mode if the threshold classification is needed.</p>';
+    html += '<h4>Group classification not available in parsimonious mode</h4>';
+    html += '<p>Group classification is not available with the 2-predictor model because it uses a different scoring scale than the full 7-predictor model. Use the calibrated probability for the consultation, or switch to full-data mode if other clinical details are available.</p>';
     html += '</div>';
   } else {
     html += '<div class="interp-card">';
     html += '<h4>Biopsy grade ' + isup + ' (outside the active surveillance candidate range)</h4>';
-    html += '<p>The 0.65 rule-in threshold was calculated for patients considering active surveillance (biopsy grade 1 or 2) and does not apply to biopsy grade 3 or 4. To discuss the risk of finding a higher grade at surgery for these patients, use the calibrated probability as a guide. For reference, the pre-specified 0.15 threshold on the overall cohort showed a sensitivity of ' +
+    html += '<p>Group classification was developed for the active-surveillance candidate range (biopsy ISUP grade 1 or 2) and does not directly apply to biopsy ISUP grade 3 or 4. To discuss the risk of finding a higher grade at surgery for these patients, use the calibrated probability as a guide. For reference, the pre-specified 0.15 threshold on the overall cohort showed a sensitivity of ' +
       (PERFORMANCE_AT_015.sens.point * 100).toFixed(1) + '% and a specificity of ' +
       (PERFORMANCE_AT_015.spec.point * 100).toFixed(1) + '% on the US validation group (n=' + PERFORMANCE_AT_015.cohortN + ').</p>';
     html += '</div>';
@@ -1352,18 +1355,18 @@ function renderSummaryCard(prob, r) {
     body = 'This predictor worked less well in independent testing, returning an area under the curve of 0.635 (95% CI 0.501 to 0.729). The lower bound is close to chance, and the slope was less reliable at 62 events. This calculator displays this risk only for transparency. Do not base surveillance entry or surgical choices on this number. Discuss other clinical findings, molecular tests, or imaging with the clinical team if there is concern about finding high-grade cancer.';
   } else if (r.asEligible && r.mode === 'full') {
     if (prob >= OPERATING_POINTS.AS_RULE_IN) {
-      headline = 'Above the active surveillance rule-in threshold: the estimated chance of finding a higher grade at surgery is ' + pctStr + ' (full 7-predictor model).';
+      headline = 'Higher-likelihood group: the estimated chance of finding a higher grade at surgery is ' + pctStr + ' (full 7-predictor model).';
       body = 'There is a high chance that surgery would find a higher grade of cancer than the biopsy showed. In the external validation group of 357 active-surveillance-eligible patients, 19% had clinical details like this patient, and about 85 in 100 of them had a higher grade at surgery (positive predictive value 85.5%, 95% CI 71.2 to 93.4). This tool was tested on patients who chose surgery rather than surveillance, so the true rate of finding a higher grade on surveillance may be different. Discuss this risk estimate alongside other clinical findings, personal values, and the specific surveillance protocol during the consultation.';
     } else {
-      headline = 'Below the active surveillance rule-in threshold: the estimated chance of finding a higher grade at surgery is ' + pctStr + ' (full 7-predictor model).';
-      body = 'The chance that surgery would find a higher grade of cancer than the biopsy showed is ' + pctStr + '. In the external validation group of 357 active-surveillance-eligible patients, about 81% fell below the rule-in threshold, and about 20 in 100 of those patients still had a higher grade at surgery (negative predictive value 79.4%, 95% CI 73.4 to 84.3). This tool was tested on patients who chose surgery rather than surveillance, so the true rate of finding a higher grade on surveillance may be different. Discuss this risk estimate alongside other clinical findings, personal values, and the specific surveillance protocol during the consultation.';
+      headline = 'Lower-likelihood group: the estimated chance of finding a higher grade at surgery is ' + pctStr + ' (full 7-predictor model).';
+      body = 'The chance that surgery would find a higher grade of cancer than the biopsy showed is ' + pctStr + '. In the external validation group of 357 active-surveillance-eligible patients, about 81% were in the lower-likelihood group, and about 20 in 100 of those patients still had a higher grade at surgery (negative predictive value 79.4%, 95% CI 73.4 to 84.3). This tool was tested on patients who chose surgery rather than surveillance, so the true rate of finding a higher grade on surveillance may be different. Discuss this risk estimate alongside other clinical findings, personal values, and the specific surveillance protocol during the consultation.';
     }
   } else if (r.asEligible && r.mode === 'parsimonious') {
     headline = 'The estimated chance of finding a higher grade at surgery is ' + pctStr + ' (2-predictor model using biopsy grade and PSA).';
-    body = 'The chance that surgery would find a higher grade of cancer than the biopsy showed is ' + pctStr + ' based on the biopsy grade and PSA. The 0.65 threshold classification is not available because the simpler 2-predictor model does not use the same scale as the full model. This tool was tested on patients who chose surgery rather than surveillance, so the true rate of finding a higher grade on surveillance may be different. Discuss this risk estimate alongside other clinical findings, personal values, and the specific surveillance protocol during the consultation. Select full-data mode if other clinical details are available.';
+    body = 'The chance that surgery would find a higher grade of cancer than the biopsy showed is ' + pctStr + ' based on the biopsy grade and PSA. Group classification is not available because the simpler 2-predictor model does not use the same scale as the full model. This tool was tested on patients who chose surgery rather than surveillance, so the true rate of finding a higher grade on surveillance may be different. Discuss this risk estimate alongside other clinical findings, personal values, and the specific surveillance protocol during the consultation. Select full-data mode if other clinical details are available.';
   } else {
     headline = 'The estimated chance of finding a higher grade at surgery is ' + pctStr + ' (biopsy grade ' + isup + ').';
-    body = 'The chance that surgery would find a higher grade of cancer than the biopsy showed is ' + pctStr + ' for biopsy grade ' + isup + '. Active surveillance is generally not standard for this grade, and the 0.65 threshold does not apply. In patients with higher biopsy grades, the remaining grade range is smaller. Discuss this risk estimate alongside other clinical findings, personal values, and the overall treatment plan during the consultation.';
+    body = 'The chance that surgery would find a higher grade of cancer than the biopsy showed is ' + pctStr + ' for biopsy grade ' + isup + '. Active surveillance is generally not standard for this grade, and group classification does not apply. In patients with higher biopsy grades, the remaining grade range is smaller. Discuss this risk estimate alongside other clinical findings, personal values, and the overall treatment plan during the consultation.';
   }
 
   document.getElementById('summaryHeadline').textContent = headline;
@@ -1383,7 +1386,7 @@ function renderInterpretation(r) {
             'The probability labeled as <em>Active-surveillance group-adjusted</em> applies this step-3 correction to align predictions with this validation group. ' +
             'Local calibration is recommended before using this tool in a true active surveillance group, where the actual rate of upgrade is typically lower (around 10% to 15%) than the 25% prevalence observed in this surgery-selected validation group.</p>';
   } else if (r.asEligible && r.mode === 'parsimonious') {
-    html += '<p>The parsimonious 2-predictor model (biopsy grade and PSA) showed an external calibration intercept of -0.220 and a slope of 1.098 on the overall US validation group. The step-3 adjustment for the active surveillance group (intercept -0.273, slope 1.417) was calculated only for the full 7-predictor model. It is not applied to the parsimonious model because the scales of the two models differ. Select full-data mode to view the adjusted probability and the validated 0.65 threshold classification.</p>';
+    html += '<p>The parsimonious 2-predictor model (biopsy grade and PSA) showed an external calibration intercept of -0.220 and a slope of 1.098 on the overall US validation group. The step-3 adjustment for the active surveillance group (intercept -0.273, slope 1.417) was calculated only for the full 7-predictor model. It is not applied to the parsimonious model because the scales of the two models differ. Select full-data mode to view the adjusted probability and the validated higher-likelihood group classification. The operating-point derivation is documented in the expandable Model details section below.</p>';
   } else {
     html += '<p>The overall US validation group (n = 562) required an intercept adjustment on external validation (intercept -0.141, slope 1.030 for the full model). ' +
             'The probability labeled as <em>US cohort-adjusted</em> applies this intercept correction. ' +
