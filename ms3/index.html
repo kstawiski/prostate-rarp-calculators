@@ -629,6 +629,9 @@
               <div class="radio-option"><input type="radio" name="pirads" value="4" id="pirads4"><label for="pirads4">4</label></div>
               <div class="radio-option"><input type="radio" name="pirads" value="5" id="pirads5"><label for="pirads5">5</label></div>
             </div>
+            <div style="background:#fffbea;border-left:3px solid var(--warning);padding:0.55rem 0.75rem;border-radius:6px;margin-top:0.55rem;font-size:0.78rem;color:var(--text-secondary);line-height:1.5">
+              <strong style="color:#8a5b00">Why PI-RADS looks non-monotonic.</strong> In this radical-prostatectomy-conditioned cohort, PI-RADS 1-2 (no MRI lesion) often gives a <em>higher</em> predicted upgrade probability than PI-RADS 3 or 4. This is a verification-bias signature: when cancer is found despite a negative MRI, the biopsy more often missed an aggressive lesion, so the prostatectomy grade tends to be higher than the biopsy grade. An MRI-fusion biopsy of a PI-RADS 5 lesion is more likely to have sampled the worst focus, leaving less room for upgrade. The 2-predictor parsimonious model (default for AS-discussion mode) matches the full-model external discrimination (paired ΔAUC +0.002, 95% CI -0.018 to +0.019), and removing MRI-fusion plus PI-RADS from the full 7-predictor model produces ΔAUC +0.00002 (likelihood-ratio p=0.22), confirming PI-RADS contributes essentially no discrimination.
+            </div>
           </div>
 
           <div class="input-group">
@@ -766,6 +769,7 @@
 
         <h4 style="margin-top:1rem">Predictors and pre-specified transformations</h4>
         <p>Full specification has seven predictors: age (years), log(PSA + 1) (ng/mL), positive-core ratio, MRI-fusion biopsy status, clinical T stage (T1 / T2 / T3+), PI-RADS category (1-2 / 3 / 4 / 5), and biopsy ISUP (1 / 2 / 3 / 4 because ISUP 5 is excluded as upgrade is mathematically impossible). Categorical reference levels: cT1, PI-RADS 1-2, ISUP 1. The parsimonious 2-predictor specification uses only biopsy ISUP and log(PSA + 1).</p>
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.4rem">PI-RADS category and clinical T stage are <strong>not monotonic risk factors</strong> in the frozen full model. PI-RADS 3 carries the most-negative coefficient (-0.575), PI-RADS 4 is -0.428, PI-RADS 5 is +0.040, and PI-RADS 1-2 is the reference (zero). Clinical T3+ is -0.504 relative to cT1. Both patterns reflect the surgery-conditioned derivation cohort, where cancer found despite a negative MRI tends to have been undersampled by systematic biopsy, while an MRI-fusion biopsy of a PI-RADS 5 lesion (or a clinically obvious cT3+ tumour) is more likely to have sampled the worst focus. Biopsy ISUP 2-4 also carry large negative coefficients because the remaining upgradeable range narrows as biopsy grade increases (a biopsy ISUP 4 case can only upgrade to grade 5). The parsimonious 2-predictor model matches the full-model external discrimination (paired ΔAUC +0.002, 95% CI -0.018 to +0.019); removing MRI-fusion plus PI-RADS produces a separate ΔAUC of +0.00002 (likelihood-ratio p=0.22), confirming the MRI variables add no measurable external discrimination. The parsimonious model is the recommended specification for AS-entry counselling.</p>
 
         <h4 style="margin-top:1rem">Cohort summary</h4>
         <p>Polish derivation cohort: consecutive single-surgeon prostatectomies at SalveMedica and Bełchatów Hospital between January 2017 and December 2024. n = 820 with biopsy ISUP 1-4 for the any-upgrade endpoint. US validation cohort: consecutive multi-surgeon prostatectomies at Brigham and Women's Hospital between January 2018 and December 2024. n = 562 for the any-upgrade endpoint, and biopsy ISUP 1-2 AS-eligible subset n = 357. Reciprocal-direction validation (US-derive then Polish-validate) returned external AUC 0.781 (95% CI 0.748-0.814) with calibration slope 0.626 drift, confirming symmetric discrimination transport with calibration drift that supports site-specific recalibration.</p>
@@ -1138,7 +1142,21 @@ function calculate() {
     probRecal = logistic(lp + MAJOR_US_OVERALL_INTERCEPT);
   }
 
-  displayResults({ probFrozen, probRecal, probRecalAs, isup, asEligible, vals, endpoint, mode });
+  // PI-RADS sensitivity: predicted any-upgrade probability across all 4 PI-RADS
+  // levels with all other inputs held constant. Only computed in full any-upgrade
+  // mode so the user can see the non-monotonic pattern at their own inputs.
+  let piradsSensitivity = null;
+  let piradsLabel = null;
+  if (endpoint === 'any' && useFullModel && vals.pirads) {
+    piradsLabel = vals.pirads;
+    const interceptShift = US_OVERALL_INTERCEPT.full;
+    piradsSensitivity = ['1-2', '3', '4', '5'].map(function (level) {
+      const lpAlt = buildLpFull(Object.assign({}, vals, { pirads: level }));
+      return { label: level, prob: logistic(lpAlt + interceptShift) };
+    });
+  }
+
+  displayResults({ probFrozen, probRecal, probRecalAs, isup, asEligible, vals, endpoint, mode, piradsSensitivity, piradsLabel });
 }
 
 // ============================================================================
@@ -1417,9 +1435,28 @@ function renderInterpretation(r) {
   if (r.endpoint === 'major') {
     html += '<li><strong>The major upgrade endpoint did not transport well in independent testing.</strong> The area under the curve on the US group was 0.635 (95% CI 0.501 to 0.729). This probability is displayed for transparency only and should not be used to make clinical decisions.</li>';
   }
+  if (r.mode === 'full') {
+    html += '<li><strong>PI-RADS and clinical T stage are not monotonic risk factors in this frozen model.</strong> PI-RADS 1-2 (no MRI lesion) often gives a higher predicted upgrade probability than PI-RADS 3 or 4, and clinical T3+ has a lower coefficient than cT1. Both patterns reflect the surgery-conditioned cohort: cancer found despite a negative MRI tends to be undersampled by systematic biopsy, while an MRI-fusion biopsy of a PI-RADS 5 lesion (or a clinically obvious cT3+ tumour) is more likely to have sampled the worst focus and leaves less room for upgrade. The 2-predictor parsimonious model (biopsy grade plus PSA) avoids this paradox and is the recommended specification for active-surveillance counselling.</li>';
+    html += '<li><strong>Biopsy ISUP 3 and 4 carry large negative coefficients because the remaining grade range is smaller</strong> (a biopsy ISUP 4 case can only upgrade to grade 5). Read the calibrated probability as a relative risk anchor against the biopsy ISUP 1-2 active-surveillance group rather than as an absolute risk for higher biopsy grades.</li>';
+  }
   html += '<li>This is a research-grade tool to support shared decision-making. It is not a CE-marked or FDA-approved medical device and does not replace clinical judgement.</li>';
   html += '</ul>';
   html += '</div>';
+
+  // PI-RADS sensitivity panel (full mode + any-upgrade only)
+  if (r.mode === 'full' && r.endpoint === 'any' && r.piradsSensitivity) {
+    html += '<div class="interp-card">';
+    html += '<h4>PI-RADS sensitivity at your other inputs</h4>';
+    html += '<p>Holding age, PSA, positive-core ratio, MRI-fusion-biopsy status, clinical T stage, and biopsy ISUP at the values you entered, the predicted any-upgrade probability across PI-RADS levels is:</p>';
+    html += '<table class="context-table"><thead><tr><th>PI-RADS</th><th>Predicted probability (US-cohort intercept-updated)</th></tr></thead><tbody>';
+    r.piradsSensitivity.forEach(function (row) {
+      var emph = (row.label === r.piradsLabel) ? ' style="background:#fffbea;font-weight:600"' : '';
+      html += '<tr' + emph + '><td>' + row.label + '</td><td>' + (100 * row.prob).toFixed(1) + '%</td></tr>';
+    });
+    html += '</tbody></table>';
+    html += '<p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem">Highlighted row is your selection. The non-monotonic ordering (PI-RADS 3 typically lowest, PI-RADS 1-2 and 5 highest) is the verification-bias signature explained in the input note.</p>';
+    html += '</div>';
+  }
 
   document.getElementById('interpContent').innerHTML = html;
 }
