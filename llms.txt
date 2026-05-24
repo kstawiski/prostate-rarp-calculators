@@ -1,0 +1,121 @@
+# Prostate Cancer Active-Surveillance Counselling Calculators
+
+> Open-access research hub for externally-validated prostate cancer
+> prediction-model calculators that support active-surveillance entry
+> counselling. Calculators implement the frozen Polish-derived
+> logistic-regression models from the Jobczyk et al. 2026 manuscript
+> (submitted to *Prostate Cancer and Prostatic Diseases*).
+
+This is a research-grade open-access decision aid. It is not a CE-marked or
+FDA-approved medical device and does not replace clinical judgement.
+
+## Calculator (MS3 ISUP Upgrade Risk)
+
+URL: https://kstawiski.github.io/prostate-rarp-calculators/ms3/
+
+The MS3 calculator estimates the probability of any-grade International
+Society of Urological Pathology (ISUP) upgrade from pre-operative biopsy to
+radical-prostatectomy pathology. A secondary research-only endpoint
+estimates the probability of a major upgrade from biopsy ISUP 1-2 to
+prostatectomy ISUP ≥ 3.
+
+### Inputs
+
+- Biopsy ISUP grade group (1, 2, 3, or 4 — grade 5 cannot upgrade)
+- Pre-operative PSA (ng/mL, log-transformed as log(PSA + 1) internally)
+- Optional (full 7-predictor mode):
+  - Age (years)
+  - Positive cores / total cores (positive-core ratio)
+  - MRI-fusion biopsy yes / no
+  - Clinical T stage (T1 / T2 / T3+)
+  - PI-RADS category (1-2 / 3 / 4 / 5)
+
+### Modes
+
+- **Parsimonious (default, recommended for AS counselling)** — uses only
+  biopsy ISUP grade and log(PSA + 1).
+- **Full 7-predictor** — adds age, positive-core ratio, MRI-fusion status,
+  clinical T stage, and PI-RADS category.
+
+### Key performance numbers
+
+- Polish derivation cohort: n = 820 (any-upgrade analytic), single-surgeon
+  prostatectomies, 2017-2024. Apparent AUC 0.810, optimism-corrected AUC
+  0.798.
+- US Brigham and Women's Hospital validation cohort: n = 562 (any-upgrade),
+  multi-surgeon prostatectomies, 2018-2024. Frozen-coefficient external
+  AUC 0.722 (95% CI 0.661-0.774). Pre-specified 0.05 AUC preservation
+  margin was *not* met (drop of 0.076).
+- US AS-eligible biopsy ISUP 1-2 subset: n = 357. External AUC 0.771
+  (95% CI 0.670-0.846).
+- Parsimonious 2-predictor model matches the full 7-predictor model in
+  external discrimination (paired ΔAUC +0.002, 95% CI -0.018 to +0.019).
+- Removing MRI-fusion biopsy plus PI-RADS from the full 7-predictor model
+  produces ΔAUC +0.00002 (likelihood-ratio p = 0.22).
+- AS-eligible operating point (Polish-derived Youden cut-off 0.65 applied
+  to US AS-eligible subset): positive predictive value 85.5% (95% CI
+  71.2-93.4), specificity 96.6% (92.2-98.5), sensitivity 44.8%
+  (35.0-55.0), negative predictive value 79.4% (73.4-84.3).
+
+### Important caveats
+
+- Both cohorts are surgery-conditioned (verification bias). True
+  active-surveillance candidates typically have a lower base rate of
+  upgrade (around 10-15%) than the 25-31% observed here.
+- The AS-eligible-subset positive predictive value drops when projected to
+  realistic AS-entry prevalences: approximately 70% at 15% prevalence,
+  approximately 59% at 10% prevalence (Supplementary Table S29).
+- The major-upgrade endpoint is research-only and uninformative on external
+  validation (AUC 0.635, 95% CI 0.501-0.729; 62 events; lower CI bound
+  near chance). It is not suitable for clinical deployment.
+- In the full 7-predictor model, only log(PSA + 1) and biopsy ISUP have
+  95% odds-ratio confidence intervals that exclude 1.0 after mutual
+  adjustment. Age, positive-core ratio, MRI-fusion biopsy, clinical T
+  stage, and all three PI-RADS levels each have CIs that include 1.0.
+  This is why the parsimonious model matches the full model.
+- PI-RADS coefficients are not strictly monotonic in the frozen full model
+  (vs PI-RADS 1-2 reference: 3 = -0.575, 4 = -0.428, 5 = +0.040). This is
+  a verification-bias signature in the RP-conditioned cohort, not a code
+  bug; an MRI-targeted biopsy of a PI-RADS 5 lesion is more likely to have
+  sampled the worst focus.
+
+## Source manuscript
+
+- **Title**: Biopsy-upgrading prediction model for active-surveillance
+  entry counselling: a Polish-US external validation
+- **Reporting guideline**: TRIPOD+AI 2024 (Collins et al., BMJ 2024)
+- **Status**: Submitted to *Prostate Cancer and Prostatic Diseases*
+  (Nature Portfolio / Springer Nature)
+- **Authors**: Mateusz Jobczyk, Timothy N. Clinton, Piotr Ciechanowski,
+  Mikołaj Frankiewicz, Rafał Bogdan Drobot, Wojciech Fendler,
+  Filipe L. De Carvalho, Konrad Stawiski
+
+## Code and data
+
+- **Zenodo deposit (DOI)**: 10.5281/zenodo.20362700
+- **Concept DOI (all versions)**: 10.5281/zenodo.20362699
+- **GitHub source**: https://github.com/kstawiski/prostate-rarp-calculators
+- **License**: MIT (code); CC-BY-4.0 (documentation)
+
+The Zenodo deposit contains all R analysis scripts, frozen logistic-
+regression coefficient JSON files, and reproducibility documentation. It
+does not contain patient-level data (IRB-restricted; BWH protocol
+2021P002957 + Polish RNN/99/26/KE).
+
+## Suggested citation
+
+> Jobczyk M, Clinton TN, Ciechanowski P, Frankiewicz M, Drobot RB,
+> Fendler W, De Carvalho FL, Stawiski K. Biopsy-upgrading prediction model
+> for active-surveillance entry counselling: a Polish-US external
+> validation. Manuscript submitted to *Prostate Cancer and Prostatic
+> Diseases* (Nature Portfolio), 2026. Online calculator and frozen
+> coefficients: https://kstawiski.github.io/prostate-rarp-calculators/ms3/
+> (Zenodo DOI 10.5281/zenodo.20362700).
+
+## Contact
+
+- Corresponding authors: Mateusz Jobczyk
+  (ORCID 0000-0001-8615-5940, Bełchatów, Poland) and Konrad Stawiski
+  (ORCID 0000-0002-6550-3384, Boston / Łódź).
+- For technical / pipeline issues: GitHub repository at
+  https://github.com/kstawiski/prostate-rarp-calculators (open issues).

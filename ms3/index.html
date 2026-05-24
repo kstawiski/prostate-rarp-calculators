@@ -3,8 +3,191 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AS-Entry Counselling: ISUP Upgrade Risk (Jobczyk et al. 2026, MS3 v1.0)</title>
-<meta name="description" content="Externally validated logistic-regression risk calculator for ISUP upgrade at radical prostatectomy. Designed to support active-surveillance discussion with biopsy-ISUP-1-2 patients. Polish-derived (n=820), externally validated on US BWH cohort (n=562). AS-eligible subset (n=357) external AUC 0.771.">
+
+<!-- ============================================================
+     Primary SEO metadata
+     ============================================================ -->
+<title>Prostate Cancer ISUP Upgrade Risk Calculator | Active Surveillance Counselling | Jobczyk et al. 2026</title>
+<meta name="description" content="Externally validated biopsy-to-prostatectomy ISUP-grade upgrade risk calculator for prostate cancer active-surveillance entry counselling. Polish derivation (n=820), US Brigham and Women's external validation (n=562, AUC 0.722; AS-eligible subset n=357, AUC 0.771). TRIPOD+AI 2024 reporting. Free, open-access research tool.">
+<meta name="keywords" content="prostate cancer, ISUP upgrade, Gleason upgrade, active surveillance, AS counselling, biopsy to prostatectomy, grade migration, radical prostatectomy upgrade, pre-operative prediction, TRIPOD+AI, external validation, Van Calster recalibration, decision curve analysis, prostate calculator, AS eligibility, biopsy ISUP grade 1 grade 2, PSA, MRI fusion biopsy, PI-RADS, Polish prostate cohort, BWH prostate cohort, Jobczyk 2026, Stawiski">
+<meta name="author" content="Mateusz Jobczyk, Timothy N. Clinton, Piotr Ciechanowski, Mikołaj Frankiewicz, Rafał Bogdan Drobot, Wojciech Fendler, Filipe L. De Carvalho, Konrad Stawiski">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="googlebot" content="index, follow">
+<link rel="canonical" href="https://kstawiski.github.io/prostate-rarp-calculators/ms3/">
+
+<!-- ============================================================
+     Open Graph (Facebook, LinkedIn, Slack, Discord, etc.)
+     ============================================================ -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Prostate Cancer ISUP Upgrade Risk Calculator">
+<meta property="og:title" content="Prostate Cancer ISUP Upgrade Risk Calculator | Active Surveillance Counselling">
+<meta property="og:description" content="Externally validated biopsy-to-prostatectomy ISUP-grade upgrade risk calculator for active-surveillance entry counselling. Polish (n=820) → US BWH (n=562) external validation; AS-eligible subset (n=357) external AUC 0.771. TRIPOD+AI 2024 reporting.">
+<meta property="og:url" content="https://kstawiski.github.io/prostate-rarp-calculators/ms3/">
+<meta property="og:image" content="https://kstawiski.github.io/prostate-rarp-calculators/ms3/preview.png">
+<meta property="og:image:alt" content="Polish-US biopsy-to-prostatectomy ISUP-upgrade prediction model overview">
+<meta property="og:image:width" content="1900">
+<meta property="og:image:height" content="1763">
+<meta property="og:image:type" content="image/png">
+<meta property="og:locale" content="en_US">
+<meta property="article:author" content="Mateusz Jobczyk">
+<meta property="article:author" content="Konrad Stawiski">
+<meta property="article:section" content="Urology / Prostate Cancer / Decision Aids">
+<meta property="article:tag" content="prostate cancer">
+<meta property="article:tag" content="active surveillance">
+<meta property="article:tag" content="ISUP upgrade">
+<meta property="article:tag" content="TRIPOD+AI">
+
+<!-- ============================================================
+     Twitter / X cards
+     ============================================================ -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Prostate Cancer ISUP Upgrade Risk Calculator | AS Counselling">
+<meta name="twitter:description" content="Externally validated biopsy-to-prostatectomy ISUP-upgrade risk calculator. Polish (n=820) → US BWH (n=562). Free open-access TRIPOD+AI research tool for active-surveillance counselling.">
+<meta name="twitter:image" content="https://kstawiski.github.io/prostate-rarp-calculators/ms3/preview.png">
+<meta name="twitter:image:alt" content="Prostate cancer ISUP upgrade risk calculator overview">
+
+<!-- ============================================================
+     JSON-LD structured data (MedicalRiskCalculator + ScholarlyArticle)
+     Optimised for LLM-search and Google rich results.
+     ============================================================ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["MedicalRiskCalculator", "WebApplication"],
+      "@id": "https://kstawiski.github.io/prostate-rarp-calculators/ms3/#calculator",
+      "name": "Biopsy-to-Prostatectomy ISUP Upgrade Risk Calculator",
+      "alternateName": ["Prostate AS-Entry Upgrade Risk Calculator", "Jobczyk-Stawiski ISUP Upgrade Calculator"],
+      "description": "Externally validated logistic-regression risk calculator that estimates the probability of any-grade (and major) International Society of Urological Pathology (ISUP) upgrade from pre-operative biopsy to radical prostatectomy. Designed to support shared decision-making about active-surveillance entry in biopsy ISUP grade group 1-2 patients. Defaults to a parsimonious 2-predictor specification (biopsy ISUP and log(PSA+1)). A full 7-predictor specification is available with explicit recalibration to the US validation cohort and to the AS-eligible biopsy ISUP 1-2 subset.",
+      "url": "https://kstawiski.github.io/prostate-rarp-calculators/ms3/",
+      "image": "https://kstawiski.github.io/prostate-rarp-calculators/ms3/preview.png",
+      "applicationCategory": "MedicalApplication",
+      "applicationSubCategory": "Prediction model risk calculator",
+      "operatingSystem": "Web browser (any modern HTML5 browser)",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+      "audience": [
+        {"@type": "MedicalAudience", "audienceType": "Urologist"},
+        {"@type": "MedicalAudience", "audienceType": "MedicalOncologist"},
+        {"@type": "MedicalAudience", "audienceType": "RadiationOncologist"},
+        {"@type": "MedicalAudience", "audienceType": "Researcher"},
+        {"@type": "MedicalAudience", "audienceType": "Patient"}
+      ],
+      "about": [
+        {
+          "@type": "MedicalCondition",
+          "name": "Prostate cancer",
+          "code": {"@type": "MedicalCode", "codingSystem": "ICD-10", "code": "C61"},
+          "alternateName": ["Malignant neoplasm of prostate", "Prostatic adenocarcinoma"]
+        },
+        {
+          "@type": "MedicalProcedure",
+          "name": "Radical prostatectomy",
+          "code": {"@type": "MedicalCode", "codingSystem": "CPT", "code": "55840"}
+        },
+        {
+          "@type": "MedicalCondition",
+          "name": "Biopsy-to-prostatectomy ISUP grade migration"
+        }
+      ],
+      "guideline": [
+        {"@type": "MedicalGuideline", "name": "TRIPOD+AI 2024 reporting guideline for clinical prediction models (Collins et al., BMJ 2024)"},
+        {"@type": "MedicalGuideline", "name": "Van Calster 2019 calibration framework (Step 1, 2, 3 recalibration hierarchy)"},
+        {"@type": "MedicalGuideline", "name": "EAU-EANM-ESTRO-ESUR-ISUP-SIOG 2024 prostate cancer guidelines"}
+      ],
+      "creator": [
+        {"@type": "Person", "name": "Mateusz Jobczyk", "honorificSuffix": "MD, PhD", "identifier": "https://orcid.org/0000-0001-8615-5940", "affiliation": {"@type": "Organization", "name": "Department of General, Oncological and Laparoscopic Urology, John Paul II Provincial Hospital, Bełchatów, Poland"}},
+        {"@type": "Person", "name": "Timothy N. Clinton", "honorificSuffix": "MD", "identifier": "https://orcid.org/0000-0002-0616-6840", "affiliation": {"@type": "Organization", "name": "Department of Urology, Brigham and Women's Hospital, Boston, MA, USA"}},
+        {"@type": "Person", "name": "Piotr Ciechanowski", "honorificSuffix": "MD", "affiliation": {"@type": "Organization", "name": "Pomeranian Medical University, Szczecin, Poland"}},
+        {"@type": "Person", "name": "Mikołaj Frankiewicz", "honorificSuffix": "MD", "affiliation": {"@type": "Organization", "name": "Department of Urology, Medical University of Gdańsk, Poland"}},
+        {"@type": "Person", "name": "Rafał Bogdan Drobot", "honorificSuffix": "MD, PhD"},
+        {"@type": "Person", "name": "Wojciech Fendler", "honorificSuffix": "MD, PhD", "identifier": "https://orcid.org/0000-0002-5083-9168"},
+        {"@type": "Person", "name": "Filipe L. De Carvalho", "honorificSuffix": "MD", "identifier": "https://orcid.org/0000-0003-2378-6512", "affiliation": {"@type": "Organization", "name": "Department of Urology, Brigham and Women's Hospital, Boston, MA, USA"}},
+        {"@type": "Person", "name": "Konrad Stawiski", "honorificSuffix": "MD, PhD", "identifier": "https://orcid.org/0000-0002-6550-3384", "affiliation": [{"@type": "Organization", "name": "Department of Urology, Brigham and Women's Hospital, Boston, MA, USA"}, {"@type": "Organization", "name": "Medical University of Łódź, Poland"}]}
+      ],
+      "isBasedOn": {"@id": "https://kstawiski.github.io/prostate-rarp-calculators/ms3/#manuscript"},
+      "softwareVersion": "1.1",
+      "datePublished": "2026-05-23",
+      "dateModified": "2026-05-24",
+      "inLanguage": "en",
+      "license": "https://opensource.org/licenses/MIT",
+      "citation": "https://doi.org/10.5281/zenodo.20362700",
+      "sameAs": [
+        "https://doi.org/10.5281/zenodo.20362700",
+        "https://zenodo.org/records/20362700",
+        "https://github.com/kstawiski/prostate-rarp-calculators"
+      ],
+      "keywords": "prostate cancer, ISUP upgrade, Gleason upgrade, active surveillance, AS-entry counselling, biopsy to prostatectomy, grade migration, radical prostatectomy upgrade, pre-operative prediction, TRIPOD+AI, external validation, Van Calster recalibration, decision curve analysis, AS eligibility, biopsy ISUP grade 1 grade 2, PSA, MRI fusion biopsy, PI-RADS, Polish prostate cohort, BWH cohort"
+    },
+    {
+      "@type": "ScholarlyArticle",
+      "@id": "https://kstawiski.github.io/prostate-rarp-calculators/ms3/#manuscript",
+      "name": "Biopsy-upgrading prediction model for active-surveillance entry counselling: a Polish-US external validation",
+      "headline": "Polish-US external validation of a pre-operative ISUP-upgrading prediction model for active-surveillance counselling",
+      "abstract": "External validation in a multi-surgeon US Brigham and Women's Hospital prostatectomy cohort (n=562) of a frozen seven-predictor logistic-regression model derived in a Polish single-surgeon cohort (n=820). Primary any-upgrade external AUC 0.722 (95% CI 0.661 to 0.774); the pre-specified 0.05 AUC preservation margin was not met (-0.076 drop from optimism-corrected Polish AUC 0.798), but rank ordering transported with useful AS-eligible-subset (biopsy ISUP 1-2, n=357) AUC 0.771. A parsimonious 2-predictor model (biopsy ISUP + log(PSA+1)) matches the full model (paired ΔAUC +0.002, 95% CI -0.018 to +0.019). Removing MRI-fusion biopsy and PI-RADS from the full model produces ΔAUC +0.00002 (likelihood-ratio p=0.22). Reported per TRIPOD+AI 2024.",
+      "keywords": "prostate cancer, biopsy to prostatectomy ISUP upgrade, active surveillance entry, external validation, transportability, TRIPOD+AI, recalibration, Van Calster, decision curve analysis, parsimonious model",
+      "author": [
+        {"@type": "Person", "name": "Mateusz Jobczyk", "identifier": "https://orcid.org/0000-0001-8615-5940"},
+        {"@type": "Person", "name": "Timothy N. Clinton", "identifier": "https://orcid.org/0000-0002-0616-6840"},
+        {"@type": "Person", "name": "Piotr Ciechanowski"},
+        {"@type": "Person", "name": "Mikołaj Frankiewicz"},
+        {"@type": "Person", "name": "Rafał Bogdan Drobot"},
+        {"@type": "Person", "name": "Wojciech Fendler", "identifier": "https://orcid.org/0000-0002-5083-9168"},
+        {"@type": "Person", "name": "Filipe L. De Carvalho", "identifier": "https://orcid.org/0000-0003-2378-6512"},
+        {"@type": "Person", "name": "Konrad Stawiski", "identifier": "https://orcid.org/0000-0002-6550-3384"}
+      ],
+      "datePublished": "2026",
+      "publisher": {"@type": "Organization", "name": "Submitted to Prostate Cancer and Prostatic Diseases (Nature Portfolio / Springer Nature)"},
+      "isPartOf": {"@type": "Periodical", "name": "Prostate Cancer and Prostatic Diseases", "publisher": {"@type": "Organization", "name": "Nature Portfolio / Springer Nature"}},
+      "citation": [
+        {"@type": "CreativeWork", "name": "MS3 PCAN analysis code and frozen coefficients (Zenodo deposit)", "url": "https://doi.org/10.5281/zenodo.20362700", "identifier": "10.5281/zenodo.20362700"}
+      ],
+      "sameAs": "https://doi.org/10.5281/zenodo.20362700"
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What does this calculator estimate?",
+          "acceptedAnswer": {"@type": "Answer", "text": "The probability that the prostate cancer grade at radical prostatectomy will be higher than the biopsy grade (any International Society of Urological Pathology grade increase). A secondary research-only endpoint estimates the probability of a major upgrade from biopsy ISUP 1-2 to prostatectomy ISUP 3 or higher."}
+        },
+        {
+          "@type": "Question",
+          "name": "Who is this calculator for?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Urologists, medical and radiation oncologists, and patients with biopsy-confirmed prostate cancer of ISUP grade group 1 or 2 who are weighing active surveillance versus immediate treatment. The calculator supports counselling, not unilateral triage."}
+        },
+        {
+          "@type": "Question",
+          "name": "What is the prediction model?",
+          "acceptedAnswer": {"@type": "Answer", "text": "A frozen logistic-regression model with two specifications: a 2-predictor parsimonious model (biopsy ISUP grade and log(PSA+1)) and a 7-predictor full model (adding age, positive-core ratio, MRI-fusion biopsy status, clinical T stage, and PI-RADS category). The parsimonious model is the default because it matches the full-model external discrimination (paired ΔAUC +0.002)."}
+        },
+        {
+          "@type": "Question",
+          "name": "How was the model validated?",
+          "acceptedAnswer": {"@type": "Answer", "text": "External validation followed the Van Calster hierarchy (Step 1 frozen coefficients, Step 2 intercept update, Step 3 intercept-plus-slope update) on a multi-surgeon US Brigham and Women's Hospital prostatectomy cohort (n=562). Primary any-upgrade external area under the curve was 0.722 (95% CI 0.661 to 0.774). The biopsy ISUP 1-2 active-surveillance-eligible subset (n=357) returned external AUC 0.771."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can this calculator be used as a stand-alone triage tool?",
+          "acceptedAnswer": {"@type": "Answer", "text": "No. Both the development and validation cohorts are surgery-conditioned (every patient went to prostatectomy). The actual upgrade rate in true active-surveillance candidates is typically lower (around 10 to 15 percent) than the 25 to 31 percent observed in these surgical cohorts. The calculator is a research-grade decision aid that should be used together with local clinical assessment and the local AS protocol; it is not a CE-marked or FDA-approved medical device."}
+        },
+        {
+          "@type": "Question",
+          "name": "What is the recommended specification for active-surveillance counselling?",
+          "acceptedAnswer": {"@type": "Answer", "text": "The 2-predictor parsimonious model (biopsy ISUP grade and log(PSA+1)) is the recommended default. Per the manuscript's coefficient table, only log(PSA+1) and biopsy ISUP have 95 percent odds-ratio confidence intervals that exclude 1.0 in the full 7-predictor model after mutual adjustment. Age, positive-core ratio, MRI-fusion biopsy, clinical T stage, and all PI-RADS levels each have CIs that include 1.0."}
+        },
+        {
+          "@type": "Question",
+          "name": "How can I cite this calculator?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Cite the Zenodo deposit DOI 10.5281/zenodo.20362700 for the analysis code and frozen coefficients. The corresponding manuscript was submitted to Prostate Cancer and Prostatic Diseases (Nature Portfolio) in 2026; updated citation details will be posted here on acceptance."}
+        }
+      ]
+    }
+  ]
+}
+</script>
+
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
