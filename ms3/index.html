@@ -119,10 +119,12 @@
   .mode-tab:hover { background: var(--primary-light); color: var(--primary); }
   .mode-tab.active { background: var(--primary); color: white; }
   /* Major-upgrade tab is research-only; keep warning colour when active so it
-     does not visually impersonate the validated any-upgrade tab. */
+     does not visually impersonate the validated any-upgrade tab. Use the deep
+     amber tone (#8a5b00) so white text has WCAG-AA contrast against the
+     active-state background; the lighter var(--warning) #d69e2e fails AA. */
   #tabMajorUpgrade:hover { background: rgba(214,158,46,0.18); color: #8a5b00; }
   #tabMajorUpgrade.active,
-  #tabMajorUpgrade.active:hover { background: var(--warning); color: white; }
+  #tabMajorUpgrade.active:hover { background: #8a5b00; color: #ffffff; }
   .mode-tab .mode-tab-sub {
     display: block;
     font-size: 0.72rem;
