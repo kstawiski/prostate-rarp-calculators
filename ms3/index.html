@@ -548,14 +548,29 @@
     <strong>How to use this tool.</strong> Enter the patient's biopsy result. The calculator returns the calibrated probability that the prostatectomy ISUP grade will be higher than the biopsy ISUP grade, plus an explicit rule-in classification at the Polish-derived operating point (predicted probability 0.65). In the external US active-surveillance-eligible cohort (biopsy ISUP 1-2, n=357), this operating point yielded positive predictive value 85.5% (95% CI 71.2-93.4). About 5 in 6 flagged patients had an upgraded prostatectomy grade. Use the rule-in classification to support counselling about a possible higher prostatectomy grade, and use the calibrated probability for shared decision-making in the remainder.
   </div>
 
+  <div class="mode-tabs" role="tablist" style="margin-bottom:0.6rem">
+    <button class="mode-tab active" id="tabAnyUpgrade" onclick="switchEndpoint('any')" role="tab">
+      Any-upgrade endpoint
+      <span class="mode-tab-sub">primary &middot; AS-entry counselling</span>
+    </button>
+    <button class="mode-tab" id="tabMajorUpgrade" onclick="switchEndpoint('major')" role="tab" style="background:rgba(214,158,46,0.05)">
+      Major-upgrade endpoint
+      <span class="mode-tab-sub">research-only &middot; biopsy ISUP 1-2 to RP ISUP &ge; 3</span>
+    </button>
+  </div>
+
+  <div id="majorUpgradeBanner" class="banner" style="display:none;background:#fef2f2;border-left-color:var(--danger);color:#8a2020">
+    <strong>Major-upgrade endpoint is research-only.</strong> External validation on the US cohort returned area under the curve 0.635 (95% confidence interval 0.501 to 0.729), with the lower bound close to chance and an uninformative slope interval at 62 events. The displayed probability is shown for transparency. Do not use this endpoint for active-surveillance triage or surgical-template modulation. The model is fitted on biopsy ISUP 1-2 only and requires all 7 predictors.
+  </div>
+
   <div class="mode-tabs" role="tablist">
     <button class="mode-tab active" id="tabParsimonious" onclick="switchMode('parsimonious')" role="tab">
-      AS-discussion mode
-      <span class="mode-tab-sub">2 predictors &middot; no MRI needed</span>
+      Parsimonious mode
+      <span class="mode-tab-sub">2 predictors &middot; biopsy ISUP + PSA only</span>
     </button>
     <button class="mode-tab" id="tabFull" onclick="switchMode('full')" role="tab">
       Full-data mode
-      <span class="mode-tab-sub">7 predictors &middot; for completeness</span>
+      <span class="mode-tab-sub">7 predictors &middot; validated 0.65 operating point</span>
     </button>
   </div>
 
@@ -810,6 +825,32 @@ const ANY_UPGRADE_FULL = {
   biopsy_isup4: -3.16284953
 };
 
+// Mirror of analysis/frozen_models/jobczyk_logistic_major_upgrade_v1.json
+//   SHA256 c6e0748255d2e2c485df44d0399c6fc8f8ff43e34523e64182beb0c023074dde
+// Full 7-predictor major-upgrade (biopsy ISUP 1-2 subset only; predicts RP ISUP >= 3).
+// HONEST DISCLOSURE: external validation AUC 0.635 (95% CI 0.501 to 0.729);
+// the lower confidence bound is close to chance and the operating slope was
+// uninformative at 62 events. Treat predictions as research-only (Results §Major-upgrade).
+const MAJOR_UPGRADE_FULL = {
+  '(Intercept)': -4.07185078,
+  age: 0.02477035,
+  psa_log: 0.38921265,
+  bx_cores_ratio: 0.42730569,
+  fusion_biopsy: -0.22853352,
+  'clinical_tT2': 0.0594662,
+  'clinical_tT3+': -0.59457562,
+  pirads_cat3: -0.41547712,
+  pirads_cat4: -0.37372886,
+  pirads_cat5: -0.07312183,
+  biopsy_isup2: 0.92018791
+  // No biopsy_isup3/biopsy_isup4 — model fitted on biopsy GG1-2 only.
+};
+
+// Major-upgrade frozen US-cohort calibration: intercept -0.44, slope 1.11
+// (manuscript Table S2; lower bound straddles chance). Recalibration is
+// optional and shown for transparency only.
+const MAJOR_US_OVERALL_INTERCEPT = -0.439;
+
 // ============================================================================
 // US-cohort recalibration intercepts (Van Calster step 2 - intercept update)
 // ============================================================================
@@ -872,7 +913,8 @@ const COHORT_COUNTS = {
 // UI state and helpers
 // ============================================================================
 
-let mode = 'parsimonious'; // or 'full'
+let mode = 'parsimonious';   // 'parsimonious' or 'full'
+let endpoint = 'any';        // 'any' (default) or 'major' (research-only)
 
 function switchMode(newMode) {
   mode = newMode;
@@ -880,9 +922,55 @@ function switchMode(newMode) {
   document.getElementById('tabFull').classList.toggle('active', mode === 'full');
   const fullInputs = document.getElementById('fullModeInputs');
   fullInputs.classList.toggle('input-disabled', mode === 'parsimonious');
-  // Recompute if results are already visible
+  syncModeForEndpoint();
   if (document.getElementById('resultsPanel').classList.contains('visible')) {
     calculate();
+  }
+}
+
+function switchEndpoint(newEndpoint) {
+  endpoint = newEndpoint;
+  document.getElementById('tabAnyUpgrade').classList.toggle('active', endpoint === 'any');
+  document.getElementById('tabMajorUpgrade').classList.toggle('active', endpoint === 'major');
+  document.getElementById('majorUpgradeBanner').style.display = endpoint === 'major' ? '' : 'none';
+  // Major-upgrade endpoint requires full 7-predictor data and is restricted to
+  // biopsy ISUP 1-2 (the JSON was fitted on that subset). Force full mode and
+  // disable ISUP 3/4 inputs when major-upgrade is active.
+  syncModeForEndpoint();
+  if (document.getElementById('resultsPanel').classList.contains('visible')) {
+    calculate();
+  }
+}
+
+function syncModeForEndpoint() {
+  // Major-upgrade endpoint is full-mode only.
+  if (endpoint === 'major') {
+    if (mode !== 'full') {
+      mode = 'full';
+      document.getElementById('tabParsimonious').classList.toggle('active', false);
+      document.getElementById('tabFull').classList.toggle('active', true);
+      document.getElementById('fullModeInputs').classList.toggle('input-disabled', false);
+    }
+    document.getElementById('tabParsimonious').setAttribute('disabled', 'disabled');
+    document.getElementById('tabParsimonious').style.opacity = '0.45';
+    document.getElementById('tabParsimonious').style.cursor = 'not-allowed';
+    // Disable ISUP 3 + ISUP 4 inputs (major-upgrade model fitted on ISUP 1-2 only)
+    ['isup3', 'isup4'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.disabled = true; el.checked = false; }
+      const lbl = el && el.parentElement;
+      if (lbl) lbl.style.opacity = '0.4';
+    });
+  } else {
+    document.getElementById('tabParsimonious').removeAttribute('disabled');
+    document.getElementById('tabParsimonious').style.opacity = '';
+    document.getElementById('tabParsimonious').style.cursor = '';
+    ['isup3', 'isup4'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = false;
+      const lbl = el && el.parentElement;
+      if (lbl) lbl.style.opacity = '';
+    });
   }
 }
 
@@ -921,6 +1009,24 @@ function buildLpFull(vals) {
   return lp;
 }
 
+function buildLpMajor(vals) {
+  // Major-upgrade model fitted on biopsy ISUP 1-2 only. ISUP 3-4 not supported.
+  const coef = MAJOR_UPGRADE_FULL;
+  let lp = coef['(Intercept)'];
+  lp += coef.age * vals.age;
+  lp += coef.psa_log * Math.log(vals.psa + 1);
+  lp += coef.bx_cores_ratio * vals.coreRatio;
+  lp += coef.fusion_biopsy * (vals.fusion ? 1 : 0);
+  if (vals.ct === 'T2') lp += coef['clinical_tT2'];
+  else if (vals.ct === 'T3+') lp += coef['clinical_tT3+'];
+  if (vals.pirads === '3') lp += coef.pirads_cat3;
+  else if (vals.pirads === '4') lp += coef.pirads_cat4;
+  else if (vals.pirads === '5') lp += coef.pirads_cat5;
+  if (vals.isup === 2) lp += coef.biopsy_isup2;
+  // ISUP 1 = reference; ISUP 3-4 not in this subset model.
+  return lp;
+}
+
 // ============================================================================
 // Main calculate function
 // ============================================================================
@@ -941,13 +1047,23 @@ function calculate() {
   }
   const isup = parseInt(isupEl.value);
 
-  let lp, vals;
+  // Endpoint-specific input validation
+  if (endpoint === 'major' && (isup === 3 || isup === 4)) {
+    alert('Major-upgrade endpoint is fitted on biopsy ISUP 1-2 only. Select ISUP 1 or 2, or switch to the any-upgrade endpoint.');
+    return;
+  }
 
-  if (mode === 'parsimonious') {
+  let lp, vals;
+  // Major-upgrade endpoint always uses full 7-predictor model; any-upgrade
+  // can use either parsimonious (default) or full.
+  const useFullModel = (endpoint === 'major') || (mode === 'full');
+
+  if (!useFullModel) {
+    // Parsimonious any-upgrade: 2 predictors only
     vals = { psa, isup };
     lp = buildLpParsimonious(vals);
   } else {
-    // Full-data mode requires all 7 predictors
+    // Full 7-predictor mode (required for major-upgrade or selected for any-upgrade)
     const ageEl = document.getElementById('age');
     const corePosEl = document.getElementById('cores_pos');
     const coreTotalEl = document.getElementById('cores_total');
@@ -988,30 +1104,41 @@ function calculate() {
       ct: ctEl.value,
       pirads: piradsEl.value
     };
-    lp = buildLpFull(vals);
+    lp = (endpoint === 'major') ? buildLpMajor(vals) : buildLpFull(vals);
   }
 
   // Probability variants
   const probFrozen = logistic(lp);
 
-  const interceptShift = (mode === 'parsimonious')
-    ? US_OVERALL_INTERCEPT.parsimonious
-    : US_OVERALL_INTERCEPT.full;
-  // Van Calster Step 2: lp_recal = alpha_hat + lp_frozen = lp + interceptShift
-  // (interceptShift is the observed Step-1 calibration intercept, negative on US).
-  const probRecal = logistic(lp + interceptShift);
-
-  // AS-eligible subset recalibration applies only when biopsy ISUP is 1 or 2.
-  // Van Calster Step 3: lp_recal_as = alpha_hat + beta_hat * lp_frozen
-  //                                = -0.273 + 1.417 * lp_frozen
-  const asEligible = (isup === 1 || isup === 2);
+  let probRecal = null;
   let probRecalAs = null;
-  if (asEligible) {
-    const lpRecalAs = AS_RECAL.intercept + AS_RECAL.slope * lp;
-    probRecalAs = logistic(lpRecalAs);
+  let asEligible = (isup === 1 || isup === 2);
+
+  if (endpoint === 'any') {
+    const interceptShift = (mode === 'parsimonious')
+      ? US_OVERALL_INTERCEPT.parsimonious
+      : US_OVERALL_INTERCEPT.full;
+    // Van Calster Step 2: lp_recal = alpha_hat + lp_frozen = lp + interceptShift
+    probRecal = logistic(lp + interceptShift);
+
+    // AS-eligible Van Calster Step 3 recalibration was derived for the FULL
+    // 7-predictor model only (manuscript Results, AS-eligible subset n=357,
+    // intercept -0.273 + slope 1.417). The 0.65 Polish-derived operating point
+    // and PPV 85.5% likewise apply to FULL-model probabilities only. Do NOT
+    // apply this transform to parsimonious-model lp, which lives on a
+    // different logit scale (parsimonious overall calibration is -0.220 / 1.098,
+    // and parsimonious AS-eligible calibration was not reported separately).
+    if (asEligible && mode === 'full') {
+      const lpRecalAs = AS_RECAL.intercept + AS_RECAL.slope * lp;
+      probRecalAs = logistic(lpRecalAs);
+    }
+  } else {
+    // Major-upgrade endpoint: research-only, optional US-cohort intercept
+    // update shown for transparency. No operating-point classification.
+    probRecal = logistic(lp + MAJOR_US_OVERALL_INTERCEPT);
   }
 
-  displayResults({ probFrozen, probRecal, probRecalAs, isup, asEligible, vals });
+  displayResults({ probFrozen, probRecal, probRecalAs, isup, asEligible, vals, endpoint, mode });
 }
 
 // ============================================================================
@@ -1024,24 +1151,40 @@ function displayResults(r) {
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // Primary display probability:
-  //   - AS-eligible patients: use AS-eligible recalibrated probability (most clinically relevant)
-  //   - Non-AS-eligible (biopsy ISUP 3 or 4): use US-recalibrated overall probability
-  const primary = r.asEligible ? r.probRecalAs : r.probRecal;
-  renderGauge(primary, r.asEligible);
+  //   - Major-upgrade endpoint: use US-recalibrated probability (research-only,
+  //     no AS-eligible-subset transform validated for this endpoint)
+  //   - Any-upgrade, full mode, AS-eligible: use AS-recalibrated probability
+  //   - Any-upgrade, parsimonious mode (regardless of ISUP): use parsimonious
+  //     US-overall recalibrated (no AS-recal because the Step-3 transform is
+  //     full-model-only — see calculate() comments)
+  //   - Any-upgrade, biopsy ISUP 3 or 4: use US-overall recalibrated
+  let primary;
+  if (r.endpoint === 'major') {
+    primary = r.probRecal;
+  } else if (r.asEligible && r.mode === 'full' && r.probRecalAs !== null) {
+    primary = r.probRecalAs;
+  } else {
+    primary = r.probRecal;
+  }
+  renderGauge(primary, r);
   renderVariantBars(r);
-  renderOperatingPoint(primary, r.asEligible, r.isup);
-  renderSummaryCard(primary, r.asEligible, r.isup, r.vals);
+  renderOperatingPoint(primary, r);
+  renderSummaryCard(primary, r);
   renderInterpretation(r);
 }
 
-function renderGauge(prob, asEligible) {
+function renderGauge(prob, r) {
   const pct = (prob * 100).toFixed(1);
   const arcLength = 267.04;
   const offset = arcLength * (1 - prob);
   const fill = document.getElementById('gaugeFill');
 
+  // Operating-point classification only applies to FULL-mode any-upgrade
+  // (because the 0.65 cut-off was derived for the seven-predictor model).
+  const fullAnyAsEligible = (r.endpoint === 'any' && r.mode === 'full' && r.asEligible);
+
   let color = 'var(--low-risk)';
-  if (asEligible) {
+  if (fullAnyAsEligible) {
     if (prob >= OPERATING_POINTS.AS_RULE_IN) color = 'var(--high-risk)';
     else if (prob >= 0.30) color = 'var(--moderate-risk)';
   } else {
@@ -1052,15 +1195,23 @@ function renderGauge(prob, asEligible) {
   fill.style.strokeDashoffset = offset;
 
   document.getElementById('gaugeValue').textContent = pct + '%';
-  document.getElementById('gaugeLabel').textContent = asEligible
-    ? 'upgrade probability (AS-eligible)'
-    : 'upgrade probability (overall)';
+  let gaugeLabel;
+  if (r.endpoint === 'major') {
+    gaugeLabel = 'major-upgrade probability (research-only)';
+  } else if (fullAnyAsEligible) {
+    gaugeLabel = 'any-upgrade probability (AS-eligible, full model)';
+  } else if (r.mode === 'parsimonious') {
+    gaugeLabel = 'any-upgrade probability (parsimonious 2-predictor)';
+  } else {
+    gaugeLabel = 'any-upgrade probability (full 7-predictor)';
+  }
+  document.getElementById('gaugeLabel').textContent = gaugeLabel;
 
   const label = document.getElementById('riskLabel');
   label.style.display = 'inline-block';
-  if (asEligible) {
+  if (fullAnyAsEligible) {
     if (prob >= OPERATING_POINTS.AS_RULE_IN) {
-      label.textContent = 'Above 0.65 rule-in threshold';
+      label.textContent = 'Above 0.65 rule-in threshold (full-model AS-eligible)';
       label.className = 'risk-label risk-high';
     } else if (prob >= 0.30) {
       label.textContent = 'Intermediate (shared-decision range)';
@@ -1069,17 +1220,23 @@ function renderGauge(prob, asEligible) {
       label.textContent = 'Below rule-in threshold';
       label.className = 'risk-label risk-low';
     }
+  } else if (r.endpoint === 'major') {
+    label.textContent = 'Research-only — see external-validation caveats';
+    label.className = 'risk-label risk-moderate';
+  } else if (r.mode === 'parsimonious') {
+    // Parsimonious mode: no validated operating point; show qualitative band only.
+    if (prob >= 0.65) label.textContent = 'High (no validated 0.65 cut-off for parsimonious mode)';
+    else if (prob >= 0.30) label.textContent = 'Intermediate (shared decision-making)';
+    else label.textContent = 'Lower predicted probability';
+    label.className = prob >= 0.65 ? 'risk-label risk-high'
+                      : (prob >= 0.30 ? 'risk-label risk-moderate' : 'risk-label risk-low');
   } else {
-    if (prob >= 0.50) {
-      label.textContent = 'High predicted upgrade probability';
-      label.className = 'risk-label risk-high';
-    } else if (prob >= 0.25) {
-      label.textContent = 'Moderate predicted upgrade probability';
-      label.className = 'risk-label risk-moderate';
-    } else {
-      label.textContent = 'Low predicted upgrade probability';
-      label.className = 'risk-label risk-low';
-    }
+    // Full mode, non-AS-eligible (ISUP 3 or 4)
+    if (prob >= 0.50) label.textContent = 'High predicted upgrade probability';
+    else if (prob >= 0.25) label.textContent = 'Moderate predicted upgrade probability';
+    else label.textContent = 'Low predicted upgrade probability';
+    label.className = prob >= 0.50 ? 'risk-label risk-high'
+                      : (prob >= 0.25 ? 'risk-label risk-moderate' : 'risk-label risk-low');
   }
 }
 
@@ -1094,18 +1251,32 @@ function renderVariantBars(r) {
     rowRecalAs.style.display = 'none';
   }
 
-  const interceptShift = (mode === 'parsimonious')
-    ? US_OVERALL_INTERCEPT.parsimonious
-    : US_OVERALL_INTERCEPT.full;
+  let interceptShift;
+  if (r.endpoint === 'major') {
+    interceptShift = MAJOR_US_OVERALL_INTERCEPT;
+  } else if (r.mode === 'parsimonious') {
+    interceptShift = US_OVERALL_INTERCEPT.parsimonious;
+  } else {
+    interceptShift = US_OVERALL_INTERCEPT.full;
+  }
 
-  document.getElementById('variantNote').innerHTML =
-    '<strong>Frozen:</strong> coefficients as published, no recalibration. ' +
+  let note = '<strong>Frozen:</strong> coefficients as published, no recalibration. ' +
     '<strong>US-recalibrated:</strong> Van Calster step 2 intercept update for the overall US cohort ' +
-    '(observed calibration intercept ' + interceptShift.toFixed(3) + '). ' +
-    (r.probRecalAs !== null
-      ? '<strong>AS-eligible recalibrated:</strong> Van Calster step 3 (intercept ' + AS_RECAL.intercept.toFixed(3) +
-        ' + slope ' + AS_RECAL.slope.toFixed(3) + ') for the biopsy ISUP 1-2 AS-eligible subset (n = 357).'
-      : '');
+    '(observed calibration intercept ' + interceptShift.toFixed(3) + '). ';
+
+  if (r.probRecalAs !== null) {
+    note += '<strong>AS-eligible recalibrated:</strong> Van Calster step 3 (intercept ' + AS_RECAL.intercept.toFixed(3) +
+      ' + slope ' + AS_RECAL.slope.toFixed(3) + ') for the biopsy ISUP 1-2 AS-eligible subset (n = 357), full-model only.';
+  } else if (r.endpoint === 'any' && r.mode === 'parsimonious') {
+    note += 'AS-eligible Step-3 recalibration is not shown because the published transform (' +
+      AS_RECAL.intercept.toFixed(3) + ' / ' + AS_RECAL.slope.toFixed(3) +
+      ') was derived for the full 7-predictor model only; switch to full-data mode to see it.';
+  } else if (r.endpoint === 'major') {
+    note += 'The major-upgrade endpoint did not transport externally (US AUC 0.635, 95% CI 0.501-0.729); ' +
+      'predictions are shown for transparency only and no AS operating point applies.';
+  }
+
+  document.getElementById('variantNote').innerHTML = note;
 }
 
 function setBar(barId, labelId, prob) {
@@ -1115,22 +1286,29 @@ function setBar(barId, labelId, prob) {
   lab.textContent = (prob * 100).toFixed(1) + '%';
 }
 
-function renderOperatingPoint(prob, asEligible, isup) {
+function renderOperatingPoint(prob, r) {
   const c = document.getElementById('operatingPointContent');
   let html = '';
+  const isup = r.isup;
+  const asEligible = r.asEligible;
 
-  if (asEligible) {
+  if (r.endpoint === 'major') {
+    html += '<div class="interp-card" style="border-color:rgba(197,48,48,0.35);background:rgba(254,242,242,0.6)">';
+    html += '<h4>Research-only endpoint &mdash; no validated operating point</h4>';
+    html += '<p>The major-upgrade endpoint (biopsy ISUP 1-2 to RP ISUP &ge; 3) did not transport across cohorts on external validation: US AUC 0.635 (95% CI 0.501 to 0.729), with the lower confidence bound close to chance and an uninformative slope interval at 62 events (manuscript Results, Supplementary Table S2). The displayed probability is shown for transparency and should be treated as a research-only summary. No Polish-derived operating point was reported for this endpoint.</p>';
+    html += '</div>';
+  } else if (asEligible && r.mode === 'full') {
     const ruleIn = prob >= OPERATING_POINTS.AS_RULE_IN;
     html += '<div class="interp-card">';
     if (ruleIn) {
-      html += '<h4>Above the AS-entry rule-in threshold (0.65)</h4>';
+      html += '<h4>Above the AS-entry rule-in threshold (0.65, full 7-predictor model)</h4>';
       html += '<p>This patient is in the <span class="highlight-stat">' +
         (PERFORMANCE_AT_065.highRiskFraction * 100).toFixed(0) +
         '% (68/357)</span> of AS-eligible patients in the external US validation cohort flagged as high-risk at the Polish-derived Youden cut-off. At this operating point:</p>';
       html += '<ul style="margin-top:0.45rem">';
       html += '<li>Positive predictive value <strong>' + (PERFORMANCE_AT_065.ppv.point * 100).toFixed(1) +
         '%</strong> (95% CI ' + (PERFORMANCE_AT_065.ppv.lo * 100).toFixed(1) + '-' +
-        (PERFORMANCE_AT_065.ppv.hi * 100).toFixed(1) + '): of 100 patients flagged, about 85 actually had an upgraded prostatectomy grade.</li>';
+        (PERFORMANCE_AT_065.ppv.hi * 100).toFixed(1) + '): of 100 patients flagged, about 85 had an upgraded prostatectomy grade.</li>';
       html += '<li>Specificity <strong>' + (PERFORMANCE_AT_065.spec.point * 100).toFixed(1) +
         '%</strong> (' + (PERFORMANCE_AT_065.spec.lo * 100).toFixed(1) + '-' +
         (PERFORMANCE_AT_065.spec.hi * 100).toFixed(1) + '): few non-upgrade patients are mis-flagged.</li>';
@@ -1139,14 +1317,19 @@ function renderOperatingPoint(prob, asEligible, isup) {
         (PERFORMANCE_AT_065.sens.hi * 100).toFixed(1) + '): more than half of true upgrades are not flagged at this cut-off, because the operating point is a rule-in aid, not a screen.</li>';
       html += '</ul>';
     } else {
-      html += '<h4>Below the AS-entry rule-in threshold (0.65)</h4>';
+      html += '<h4>Below the AS-entry rule-in threshold (0.65, full 7-predictor model)</h4>';
       html += '<p>This patient is in the <span class="highlight-stat">' +
         (100 - PERFORMANCE_AT_065.highRiskFraction * 100).toFixed(0) +
         '% (289/357)</span> of AS-eligible patients in the external US validation cohort below the Polish-derived Youden cut-off. The calibrated upgrade probability is the primary quantitative input for shared decision-making, and the rule-in classification does not apply. Negative predictive value at the cut-off was ' +
         (PERFORMANCE_AT_065.npv.point * 100).toFixed(1) + '% (' +
         (PERFORMANCE_AT_065.npv.lo * 100).toFixed(1) + '-' + (PERFORMANCE_AT_065.npv.hi * 100).toFixed(1) +
-        '): about 1 in 5 patients below the cut-off were nonetheless found to have an upgraded grade at prostatectomy.</p>';
+        '): about 1 in 5 patients below the cut-off were found to have an upgraded grade at prostatectomy.</p>';
     }
+    html += '</div>';
+  } else if (asEligible && r.mode === 'parsimonious') {
+    html += '<div class="interp-card">';
+    html += '<h4>Operating-point classification not available in parsimonious mode</h4>';
+    html += '<p>The Polish-derived 0.65 rule-in threshold and its external-validation performance (PPV 85.5%, sensitivity 44.8%, specificity 96.6%, NPV 79.4% on US AS-eligible n=357) were established for the <strong>full 7-predictor model</strong>. The parsimonious 2-predictor probabilities live on a different logit scale, so the same 0.65 cut-off does not inherit the published operating characteristics. Use the calibrated probability for shared decision-making, and switch to <em>full-data mode</em> if you need the validated rule-in classification.</p>';
     html += '</div>';
   } else {
     html += '<div class="interp-card">';
@@ -1160,29 +1343,42 @@ function renderOperatingPoint(prob, asEligible, isup) {
   c.innerHTML = html;
 }
 
-function renderSummaryCard(prob, asEligible, isup, vals) {
+function renderSummaryCard(prob, r) {
   const pctStr = (prob * 100).toFixed(1) + '%';
+  const isup = r.isup;
   let headline, body;
 
-  if (asEligible) {
+  if (r.endpoint === 'major') {
+    headline = 'Major-upgrade predicted probability ' + pctStr +
+               ' (research-only; external validation AUC 0.635, 95% CI 0.501-0.729).';
+    body = 'The major-upgrade endpoint (biopsy ISUP 1-2 to prostatectomy ISUP at least 3) did not transport externally with confidence. ' +
+           'The displayed probability is shown for transparency only. Discrimination on the US validation cohort touched the chance bound, the operating slope was uninformative at 62 events, and no validated rule-in threshold was reported in the source manuscript. ' +
+           'Do not base AS triage or surgical templating on this number; use the any-upgrade endpoint for shared decision-making and consult richer molecular or imaging tools when high-grade reclassification is the specific concern.';
+  } else if (r.asEligible && r.mode === 'full') {
     if (prob >= OPERATING_POINTS.AS_RULE_IN) {
       headline = 'Above the AS rule-in threshold: predicted upgrade probability ' + pctStr +
-                 ' (Polish-derived 0.65 cut-off, US AS-eligible cohort PPV 85.5%).';
+                 ' (Polish-derived 0.65 cut-off, US AS-eligible cohort PPV 85.5%, full 7-predictor model).';
       body = 'For a biopsy ISUP ' + isup + ' patient considering active surveillance, ' +
              'this calculator places the patient above the Polish-derived rule-in threshold validated externally on the US biopsy ISUP 1-2 subset. ' +
              'Approximately 85 in 100 patients flagged this way had a prostatectomy ISUP grade above the biopsy grade. ' +
-             'Intensified counselling about expected post-operative grade is appropriate, paired with discussion of patient values, life expectancy, ' +
+             'Intensified counselling about a possible higher prostatectomy grade is appropriate, paired with discussion of patient values, life expectancy, ' +
              'and current AS protocol triggers. The model does not constitute an AS-eligibility decision: both validation cohorts are ' +
              'prostatectomy-conditioned and the operating point requires baseline-risk recalibration before deployment in a true AS-entry cohort.';
     } else {
       headline = 'Below the AS rule-in threshold: predicted upgrade probability ' + pctStr +
-                 '. Use the calibrated probability for shared decision-making.';
+                 ' (full 7-predictor model). Use the calibrated probability for shared decision-making.';
       body = 'For a biopsy ISUP ' + isup + ' patient considering active surveillance, ' +
              'this calculator places the patient below the Polish-derived rule-in threshold. ' +
              'The calibrated upgrade probability is the recommended quantitative input for shared decision-making about AS versus immediate treatment. ' +
              'Note that the NPV at the 0.65 cut-off is 79%: a probability below 0.65 does not exclude upgrade. ' +
              'AS-protocol-specific surveillance intervals, repeat MRI, and confirmatory biopsy thresholds should be discussed independently.';
     }
+  } else if (r.asEligible && r.mode === 'parsimonious') {
+    headline = 'Parsimonious predicted upgrade probability ' + pctStr +
+               ' (biopsy ISUP + log-PSA; no validated 0.65 operating point).';
+    body = 'For a biopsy ISUP ' + isup + ' patient considering active surveillance, this calculator returns a calibrated upgrade probability from the simple 2-predictor specification (biopsy ISUP plus log-transformed PSA). ' +
+           'The Polish-derived 0.65 rule-in threshold and its external PPV 85.5% were established for the FULL 7-predictor model on AS-eligible patients, and the parsimonious probability lives on a different logit scale; the rule-in classification is therefore not displayed in this mode. ' +
+           'Use the probability for shared decision-making; switch to full-data mode for the validated rule-in classification if MRI-fusion, PI-RADS, clinical T, age, and core-ratio data are available.';
   } else {
     headline = 'Biopsy ISUP ' + isup + ': predicted upgrade probability ' + pctStr +
                ' (overall-cohort US-recalibrated).';
@@ -1198,27 +1394,36 @@ function renderSummaryCard(prob, asEligible, isup, vals) {
 function renderInterpretation(r) {
   let html = '';
 
-  // Decision-curve context
+  // Calibration and recalibration context
   html += '<div class="interp-card">';
   html += '<h4>Calibration and recalibration</h4>';
-  if (r.asEligible) {
-    html += '<p>The AS-eligible biopsy ISUP 1-2 subset (n = 357) required intercept-and-slope updating on external validation (intercept -0.273, slope 1.417). ' +
+  if (r.endpoint === 'major') {
+    html += '<p>The major-upgrade frozen logistic on the Polish derivation cohort had optimism-corrected AUC 0.639 and slope 0.803. On external US validation it returned AUC 0.635 (95% CI 0.501 to 0.729) with calibration intercept -0.44 and slope 1.11 (95% CI 0.44 to 1.87). The wide slope interval reflects 62 events and is not actionable. The displayed US-recalibrated probability applies an intercept update for transparency but does not rescue the endpoint.</p>';
+  } else if (r.asEligible && r.mode === 'full') {
+    html += '<p>The AS-eligible biopsy ISUP 1-2 subset (n = 357) required intercept-and-slope updating on external validation of the full 7-predictor model (intercept -0.273, slope 1.417). ' +
             'The probability shown as <em>AS-eligible recalibrated</em> applies this Van Calster step-3 transform to bring the model to nominal calibration on the US AS-eligible cohort. ' +
-            'Local baseline-risk recalibration is recommended before deployment to a true AS-entry cohort (where prevalence is closer to 10-15% rather than the 25% prostatectomy-conditioned US prevalence).</p>';
+            'Local baseline-risk recalibration is recommended before deployment to a true AS-entry cohort (where prevalence is closer to 10-15% rather than the prostatectomy-conditioned 25% US prevalence).</p>';
+  } else if (r.asEligible && r.mode === 'parsimonious') {
+    html += '<p>The parsimonious 2-predictor model (biopsy ISUP + log(PSA + 1)) showed external calibration intercept -0.220 and slope 1.098 on the overall US cohort. The Van Calster step-3 AS-eligible-subset transform (intercept -0.273, slope 1.417) was reported in the manuscript for the FULL 7-predictor model only and is not applied here, because the parsimonious model linear-predictor scale differs. Switch to <em>full-data mode</em> to see the AS-eligible-subset recalibrated probability and the validated 0.65 rule-in classification.</p>';
   } else {
-    html += '<p>The overall US cohort (n = 562) required intercept-only updating on external validation (intercept -0.141, slope 1.030). ' +
+    html += '<p>The overall US cohort (n = 562) required intercept-only updating on external validation (intercept -0.141, slope 1.030 for the full model). ' +
             'The probability shown as <em>US-recalibrated</em> applies the Van Calster step-2 intercept update. ' +
             'For ISUP 3 and 4 patients the upgrade-probability signal is partially structural (the remaining grade ceiling shrinks at higher biopsy grades), so use the calibrated number to inform pre-operative counselling rather than as an isolated triage decision.</p>';
   }
   html += '</div>';
 
-  // Why parsimonious works
-  if (mode === 'parsimonious') {
-    html += '<div class="interp-card">';
-    html += '<h4>Why the calculator defaults to two predictors</h4>';
-    html += '<p>Removing MRI-fusion-biopsy status and PI-RADS category from the full seven-predictor specification produced &Delta;AUC +0.00002 (95% CI -0.026 to +0.025, likelihood-ratio p=0.22) on external validation. The parsimonious biopsy-ISUP plus log(PSA + 1) model matches the full-model discrimination (paired &Delta;AUC +0.002). For AS-entry counselling, the simpler two-predictor model is preferred when MRI infrastructure is not routinely available, because most of the discrimination signal comes from biopsy grade and PSA. The full seven-predictor model is available in the <em>full-data mode</em> tab for completeness.</p>';
-    html += '</div>';
+  // Mode/endpoint provenance
+  html += '<div class="interp-card">';
+  html += '<h4>Active mode and endpoint</h4>';
+  let modeLabel = (r.endpoint === 'major') ? 'major-upgrade endpoint (research-only)'
+                                            : 'any-upgrade endpoint';
+  let predLabel = (r.mode === 'parsimonious') ? '2-predictor parsimonious specification (biopsy ISUP + log-PSA)'
+                                                 : '7-predictor full specification';
+  html += '<p>Displayed prediction uses the <strong>' + modeLabel + '</strong> with the <strong>' + predLabel + '</strong>.</p>';
+  if (r.endpoint === 'any' && r.mode === 'parsimonious') {
+    html += '<p>Removing MRI-fusion-biopsy status and PI-RADS category from the full seven-predictor specification produced &Delta;AUC +0.00002 (95% CI -0.026 to +0.025, likelihood-ratio p=0.22) on external validation. For AS-entry counselling, the simpler 2-predictor model is preferred when MRI infrastructure is not routinely available, because most of the discrimination signal comes from biopsy grade and PSA.</p>';
   }
+  html += '</div>';
 
   // Caveats
   html += '<div class="interp-card">';
@@ -1226,7 +1431,10 @@ function renderInterpretation(r) {
   html += '<ul>';
   html += '<li>Both derivation and validation cohorts are restricted to patients who proceeded to radical prostatectomy: men with biopsy ISUP 1-2 who remain on active surveillance are not in the dataset. This introduces verification bias.</li>';
   html += '<li>Polish derivation cohort is single-surgeon, two-centre; US validation cohort is multi-surgeon (16 operators) at a single academic tertiary centre. The reciprocal-direction validation (US-derived to Polish-tested) returned external AUC 0.781 with calibration slope 0.626 drift, showing symmetric discrimination transport with cohort-specific calibration shift.</li>';
-  html += '<li>The pre-specified 0.05 AUC preservation margin was not met (observed drop 0.076, from 0.798 to 0.722). Despite this, AS-eligible-subset AUC 0.771 supports use of the calibrated risk in AS-entry counselling after local recalibration.</li>';
+  html += '<li>The pre-specified 0.05 AUC preservation margin was not met for the any-upgrade endpoint (observed drop 0.076, from 0.798 to 0.722). Despite this, AS-eligible-subset AUC 0.771 supports use of the calibrated risk in AS-entry counselling after local recalibration.</li>';
+  if (r.endpoint === 'major') {
+    html += '<li><strong>The major-upgrade endpoint did not transport externally.</strong> US AUC 0.635 (95% CI 0.501-0.729). The displayed probability is for transparency only; do not use for clinical triage.</li>';
+  }
   html += '<li>This is a research-grade tool to support shared decision-making. It is not a CE-marked or FDA-approved clinical-decision-support device and does not replace clinical judgement.</li>';
   html += '</ul>';
   html += '</div>';
