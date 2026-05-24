@@ -302,7 +302,7 @@
   }
   .gauge-svg {
     width: 220px;
-    height: 130px;
+    height: 150px;
     margin: 0 auto;
   }
   .gauge-track-arc {
@@ -661,11 +661,11 @@
         <!-- Gauge -->
         <div class="card gauge-card" style="margin-bottom:1.2rem">
           <div class="card-title" style="justify-content:center"><span class="icon">%</span> Calibrated upgrade probability</div>
-          <svg viewBox="0 0 220 130" class="gauge-svg" aria-label="Risk gauge">
+          <svg viewBox="0 0 220 150" class="gauge-svg" aria-label="Risk gauge">
             <path class="gauge-track-arc" d="M 25 110 A 85 85 0 0 1 195 110"/>
             <path class="gauge-fill-arc" id="gaugeFill" d="M 25 110 A 85 85 0 0 1 195 110"/>
             <text x="110" y="92" class="gauge-value-text" id="gaugeValue">—</text>
-            <text x="110" y="118" class="gauge-label-text" id="gaugeLabel">probability</text>
+            <text x="110" y="138" class="gauge-label-text" id="gaugeLabel">probability</text>
           </svg>
           <div id="riskLabel" class="risk-label risk-moderate" style="display:none">—</div>
 
@@ -1197,9 +1197,9 @@ function renderGauge(prob, r) {
   document.getElementById('gaugeValue').textContent = pct + '%';
   let gaugeLabel;
   if (r.endpoint === 'major') {
-    gaugeLabel = 'chance of major upgrade (research-only)';
+    gaugeLabel = 'chance of major upgrade (research only)';
   } else if (fullAnyAsEligible) {
-    gaugeLabel = 'chance of upgrade in grade (active surveillance eligible, full model)';
+    gaugeLabel = 'chance of upgrade in grade (AS-eligible, full model)';
   } else if (r.mode === 'parsimonious') {
     gaugeLabel = 'chance of upgrade in grade (2 predictors)';
   } else {
